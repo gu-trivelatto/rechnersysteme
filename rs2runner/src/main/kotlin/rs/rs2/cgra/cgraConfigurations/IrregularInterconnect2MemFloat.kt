@@ -25,18 +25,25 @@ class IrregularInterconnect2MemFloat : ICgraHdlGenerationModelProvider {
         grid[0, 0].addInterconnectInput(grid[1, 0])
         grid[1, 0].addInterconnectInput(grid[0, 0])
 
-        // second row connected to first row, same column
+        // second row connected to first row, same column and reverse
         grid[0, 1].addInterconnectInput(grid[0, 0])
         grid[1, 1].addInterconnectInput(grid[1, 0])
+        grid[0, 0].addInterconnectInput(grid[0, 1])
+        grid[1, 0].addInterconnectInput(grid[1, 1])
         // second row connected to each other
         grid[0, 1].addInterconnectInput(grid[1, 1])
         grid[1, 1].addInterconnectInput(grid[0, 1])
 
-        // third row connected to first row, straight & diagonal
+        // third row connected to second row, straight & diagonal and reverse
         grid[0, 2].addInterconnectInput(grid[0, 1])
         grid[1, 2].addInterconnectInput(grid[1, 1])
         grid[0, 2].addInterconnectInput(grid[1, 1])
         grid[1, 2].addInterconnectInput(grid[0, 1])
+        grid[0, 1].addInterconnectInput(grid[0, 2])
+        grid[1, 1].addInterconnectInput(grid[1, 2])
+        grid[1, 1].addInterconnectInput(grid[0, 2])
+        grid[0, 1].addInterconnectInput(grid[1, 2])
+
         // third row connected to each other
         grid[0, 2].addInterconnectInput(grid[1, 2])
         grid[1, 2].addInterconnectInput(grid[0, 2])
