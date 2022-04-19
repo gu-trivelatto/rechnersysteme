@@ -1,0 +1,328 @@
+package rs.rs2.cgra.app
+
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import com.beust.jcommander.Parameter
+import com.beust.jcommander.ParameterException
+import com.beust.jcommander.converters.PathConverter
+import de.tu_darmstadt.rs.cgra.igraph.opt.GenericCfgOptimizationConfig
+import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
+import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
+import de.tu_darmstadt.rs.cgra.simulator.impl.testing.loggingConfigs.configureStdCgraLogging
+import de.tu_darmstadt.rs.cgra.synthesis.builder.applyUnrolling
+import de.tu_darmstadt.rs.cgra.synthesis.kernel.WriteLocCompression
+import de.tu_darmstadt.rs.cgra.synthesis.testing.enableScarAssertions
+import de.tu_darmstadt.rs.disasm.executable.IExecutableBinary
+import de.tu_darmstadt.rs.disasm.executable.VariableInsnLengthElfLoader
+import de.tu_darmstadt.rs.jcommander.validators.DirectoryExistsValidator
+import de.tu_darmstadt.rs.memoryTracer.MemoryTracer
+import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
+import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.parseToKernelDescriptor
+import de.tu_darmstadt.rs.nativeSim.components.debugging.GdbSimulationDriver
+import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
+import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
+import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.ICfgManagerBuilder
+import de.tu_darmstadt.rs.nativeSim.synthesis.patchingStrategy.builder.KernelSelection
+import de.tu_darmstadt.rs.riscv.RvArchInfo
+import de.tu_darmstadt.rs.riscv.impl.synthesis.builder.cgraAcceleration
+import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
+import de.tu_darmstadt.rs.riscv.simulator.impl.builder.RvSystemBuilder
+import de.tu_darmstadt.rs.riscv.simulator.impl.components.syscalls.ECallExecutor
+import de.tu_darmstadt.rs.riscv.simulator.impl.debugging.runFullProgramWithDebugging
+import de.tu_darmstadt.rs.simulator.api.ISystemSimulator
+import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
+import de.tu_darmstadt.rs.simulator.api.clock.ITicker
+import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+
+abstract class BaseRunnerCommand {
+
+    @Parameter(variableArity = true, description = "executable [args]")
+    var programAndArgs: List<String> = mutableListOf()
+
+    @Parameter(names = ["-E"], description = "Sets an additional Env-Var", hidden = true)
+    var envVars: List<String> = mutableListOf()
+
+    @Parameter(names = ["-g"], description = "Await attaching of Debugger on this port")
+    var debuggerPort: Int? = null
+
+    @Parameter(names = ["-strace"], description = "Sets LogLevel for syscalls to trace", hidden = true)
+    var logSyscalls: Boolean = false
+
+    @Parameter(names = ["--trace-gdb"], description = "Sets LogLevel for GdbSimulationDriver to trace", hidden = true)
+    var traceGdb: Boolean = false
+
+    @Parameter(
+        names = ["-v", "--virtRoot"],
+        description = "similar to chroot, this becomes '/' within the simulation",
+        converter = PathConverter::class,
+        validateValueWith = [DirectoryExistsValidator::class],
+        hidden = true
+    )
+    var virtRoot: Path? = null
+
+    @Parameter(names = ["--logPerf"], description = "Measure Simulation-Performance and print it to Console in intervals")
+    var logPerformance: Boolean = false
+
+    @Parameter(names = ["-t", "--timeout"], description = "Set a Timeout for the Simulation. When reached the simulator will terminate.")
+    var timeout: Long? = null
+
+    @Parameter(
+        names = ["--parseEager"],
+        description = "Parse the code of the given Binary entirely before starting the simulation. Requires more memory, but is faster",
+        hidden = true
+    )
+    var parseEager: Boolean = false
+
+    @Parameter(names = ["--simOut"], description = "Directory into which to pack simulator framework and synthesis outputs.")
+    var debugOutputDir: Path = Paths.get("simOut")
+
+    @Parameter(names = ["--vcd"], description = "Generate Waveform for RISC-V")
+    var vcdOutput: Boolean = false
+
+    @Parameter(names = ["--trace-memory"], description = "Write a trace file for all memory accesses", converter = PathConverter::class)
+    var traceMemory: Path? = null
+
+    @Parameter(names = ["-h", "--help"], description = "Print this Help to Console")
+    var help: Boolean = false
+
+
+    protected fun configureLogging(sim: ISystemSimulator, system: IRvSystem, excluseCgra: Boolean) {
+        if (logSyscalls) {
+            (slf4j<BaseSyscallHandler>() as Logger).level = Level.toLevel("trace")
+            (slf4j<ECallExecutor>() as Logger).level = Level.toLevel("trace")
+        }
+
+        val vcdOutput = vcdOutput
+
+        sim.logManager {
+            if (logPerformance) {
+                measureSimulatorPerformanceContinuously = true
+            }
+        }
+        if (vcdOutput) {
+            sim.addLoggingSink(SimulatorFramework.vcdLogger)
+            sim.logManager {
+                logTicks(logPauses = true)
+                ticker {
+                    +ITicker.SIM_PAUSE_REASON
+                }
+                container("rvSystem") {
+                    container("Core") {
+                        +"PC"
+                        container("Dispatcher") {
+                            logAll()
+                        }
+                        container("registerFile") {
+                            +"gpRegs"
+                            +"fpRegs"
+                        }
+                    }
+                    if (system.cgra != null && !excluseCgra) {
+                        container("cgra") {
+                            configureStdCgraLogging()
+                        }
+                    }
+                }
+                allElements {
+                    if (this.elem is ZeroLatencyByteAddressedCgraMemoryPort) {
+                        logAll()
+                    }
+                }
+            }
+        }
+    }
+
+    protected fun getDisasmType() = when (parseEager) {
+        true -> VariableInsnLengthElfLoader.DisasmType.Eager
+        else -> VariableInsnLengthElfLoader.DisasmType.AsYouGo
+    }
+
+    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions) {
+        val requireCgra = options.accelerateAot
+
+        if (requireCgra) {
+            val cgraName = options.cgra
+            val provider = CgraModelLoader.loadSchedulerModelByName(cgraName) ?: throw ParameterException("cgraConfig $cgraName not found!")
+            val model = provider()
+            System.err.println("Using Cgra-Config: ${model.name}")
+            cgraAcceleration(model) {
+                val cgraVcdOut = options.cgraVcdOutput
+                configureCgra(this@configureCgraIfNeeded.executable, options, simCgraWithHook = cgraVcdOut || options.createCgraRefImage, generateCgraWaveForms = cgraVcdOut)
+            }
+        }
+    }
+
+    private fun ICfgManagerBuilder<*>.configureKernelOptimization() {
+        basePassConfig = GenericCfgOptimizationConfig.Default
+
+        unrollingFactors(4, 8)
+    }
+
+    private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgra(
+        elf: IExecutableBinary<*, *>,
+        options: CgraAccelerationOptions,
+        simCgraWithHook: Boolean,
+        generateCgraWaveForms: Boolean
+    ) {
+        synthOutputPath = debugOutputDir
+
+        val kernels = options.kernels.map { kernelId ->
+            kernelId.parseToKernelDescriptor(elf)
+        }
+
+        cfgOpt {
+            dumpSerCfg = options.createCgraRefImage
+            intrinsics {
+                useAll()
+            }
+
+            configureKernelOptimization()
+        }
+
+        if (simCgraWithHook) {
+            useCgraHookExecution {
+
+                cgraLoopProfiling = true
+                kernelSelection = KernelSelection.KernelWithIntegratedGlobalSpeculation
+                printLoopLengths = true
+                dumpCgraSchedule = true
+                dumpReferenceLiveValues = true
+
+                if (options.createCgraRefImage) {
+                    kernels
+                        .filterIsInstance<NativeKernelDescriptor.FunctionKernelDescriptor>()
+                        .forEach {
+                            applyMemoryTracer(
+                                it.id,
+                                MemoryTracer(dumpRefImage = debugOutputDir.resolve("${it.id}.refMemory.json"))
+                            )
+                        }
+                }
+
+                if (generateCgraWaveForms) {
+                    loggingConfig {
+                        addLoggingSink(SimulatorFramework.vcdLogger)
+                        logManager {
+                            configureStdCgraLogging()
+                            allElements {
+                                if (this.elem is ZeroLatencyByteAddressedCgraMemoryPort) {
+                                    logAll()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            useMMIOSpeculativePatchingWithCheckOffload() {
+
+                cgraLoopProfiling = true
+
+                dumpAsapSchedule = true
+                dumpCgraSchedule = true
+                dumpUtilization = true
+
+                printPatchInsns = true
+
+                writeLocCompression = WriteLocCompression.All
+
+                onEachKernel { kernel ->
+//                        result(kernelInfo) {
+//                            kernel.schedulerStatistics?.let { import(it) }
+//                        }
+                }
+
+//                    if (memTracerFactory != null) {
+//                        applyMemoryTracer(
+//                            kernelInfo.functionName,
+//                            memTracerFactory.invoke(
+//                                outputDir.resolve("cgraMemory.trace")
+//                                    .takeIf { generateMemoryTraceFiles })
+//                        )
+//                    }
+
+                enableScarAssertions()
+            }
+        }
+//            useCfgSimOnly {
+//                if (memTracerFactory != null) {
+//                    applyMemoryTracer(
+//                        kernelInfo.functionName,
+//                        memTracerFactory.invoke(
+//                            outputDir.resolve("cfgMemory.trace")
+//                                .takeIf { generateMemoryTraceFiles })
+//                    )
+//                }
+//
+//                dumpReferenceLiveValues = true
+//
+//                loopProfiling = true
+//            }
+
+        forceUseSlowKernels = kernels.isNotEmpty()
+        throwSynthesisErrors = true
+
+        aotAcceleration {
+            kernels.forEach {
+                accelerate(it)
+            }
+        }
+
+    }
+
+    protected fun RvSystemBuilder.configureMemory() {
+        unlimitedPagedMemory {
+            additionalInitialization {
+                val traceFile = this@BaseRunnerCommand.traceMemory
+                if (traceFile != null) {
+                    tracer = MemoryTracer(dumpTrace = traceFile)
+                }
+            }
+        }
+    }
+
+    protected fun RvSystemBuilder.configureEnvAndStdio(argsWithoutProg: List<String>) {
+        env {
+            if (!workingDirectory.toString().startsWith('/') || this@BaseRunnerCommand.virtRoot != null) {
+                virtRoot = this@BaseRunnerCommand.virtRoot ?: workingDirectory.parent?.parent?.parent ?: workingDirectory
+            } // default behavoir of EnvBuilder does the right thing for linux/unix, using '/' as virtRoot
+            envVar("LC_NUMERIC", "en_US.UTF-8")
+            envVar("LANG", "en_US.UTF-8")
+            this@BaseRunnerCommand.envVars.forEach {
+                val split = it.split('=')
+                check(split.size == 2) { "env '$it' does not hold to format ENVNAME=value" }
+                envVar(split[0], split[1])
+            }
+            args(argsWithoutProg, useProgNameAsArg0 = true)
+        }
+        stdio {
+            passthroughStdOutAndErr = true
+        }
+    }
+
+    protected fun collectExPathAndArgs(): Pair<Path, List<String>> {
+        val executable = programAndArgs.firstOrNull() ?: throw ParameterException("No executable was given!")
+        val exPath = Paths.get(executable)
+        if (!Files.isRegularFile(exPath)) {
+            throw ParameterException("The executable '$exPath' does not exist!")
+        }
+
+        val argsWithoutProg = programAndArgs.drop(1)
+        return Pair(exPath, argsWithoutProg)
+    }
+
+    protected fun ISystemSimulator.runSimulatorPossiblyWithGdb(system: IRvSystem) {
+        val debuggerPort = debuggerPort
+        if (debuggerPort != null) {
+            if (traceGdb) {
+                (slf4j<GdbSimulationDriver>() as Logger).level = Level.toLevel("trace")
+            }
+            runFullProgramWithDebugging(system, timeout, port = debuggerPort, waitForDebugger = true)
+        } else {
+            runFullProgram(timeout)
+        }
+    }
+}

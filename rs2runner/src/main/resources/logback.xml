@@ -1,0 +1,24 @@
+<configuration>
+
+    <conversionRule conversionWord="ll"
+                    converterClass="de.tu_darmstadt.rs.util.kotlin.logging.LogLevelLowerCaseConverter"/>
+
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+		<target>System.err</target>
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%highlight(%-5r %-5ll %logger{20} %marker: %msg){}%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="de.tu_darmstadt.rs.simulator.clock.Ticker"
+            level="INFO"/>
+
+	<logger name="de.tu_darmstadt.rs.nativeSim.synthesis.NativeAccelerationManager" level="INFO"/>
+	<logger name="de.tu_darmstadt.rs.riscv.impl.synthesis.CgraExecutionHook" level="INFO"/>
+
+    <root level="warn">
+        <appender-ref ref="STDERR"/>
+    </root>
+</configuration>

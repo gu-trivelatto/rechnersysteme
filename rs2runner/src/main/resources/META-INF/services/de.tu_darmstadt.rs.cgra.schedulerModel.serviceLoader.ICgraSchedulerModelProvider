@@ -1,0 +1,15 @@
+rs.rs2.cgra.cgraConfigurations.Std2x2MatrixStar2MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std2x2MatrixStar1MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std2x2MatrixStar2MemCombBss256r4096cFloat
+
+rs.rs2.cgra.cgraConfigurations.Std2x2x2MatrixStar2MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std2x2x2MatrixStar2MemCombBss256r4096cFloat
+rs.rs2.cgra.cgraConfigurations.Std2x2x2Matrix2MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std2x2x2Matrix2MemCombBss256r4096cFloat
+
+rs.rs2.cgra.cgraConfigurations.Std4x4MatrixStar2MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std4x4MatrixStar1MemCombBss256r4096cInt
+rs.rs2.cgra.cgraConfigurations.Std4x4MatrixStar2MemCombBss256r4096cFloat
+
+rs.rs2.cgra.cgraConfigurations.PerformanceFocused
+rs.rs2.cgra.cgraConfigurations.EfficiencyFocused
