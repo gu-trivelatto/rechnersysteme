@@ -6,6 +6,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.converters.PathConverter
 import de.tu_darmstadt.rs.cgra.igraph.opt.GenericCfgOptimizationConfig
+import de.tu_darmstadt.rs.cgra.igraph.opt.loops.PrefetchingConfig
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
 import de.tu_darmstadt.rs.cgra.simulator.impl.testing.loggingConfigs.configureStdCgraLogging

@@ -15,7 +15,7 @@
     <logger name="de.tu_darmstadt.rs.simulator.clock.Ticker"
             level="INFO"/>
 
-	<logger name="de.tu_darmstadt.rs.nativeSim.synthesis.NativeAccelerationManager" level="INFO"/>
+	<logger name="de.tu_darmstadt.rs.nativeSim.synthesis.NativeAccelerationManager" level="DEBUG"/>
 	<logger name="de.tu_darmstadt.rs.riscv.impl.synthesis.CgraExecutionHook" level="INFO"/>
 
     <root level="warn">

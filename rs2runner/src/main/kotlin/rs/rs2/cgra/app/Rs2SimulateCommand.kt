@@ -91,24 +91,23 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
             val stopTime = System.currentTimeMillis()
             val passedTime = (stopTime - startTime).toFloat()/1000
             System.err.println("Real Time: $passedTime s")
-            System.err.flush()
 
             system.core.dispatcher.profiler?.let { profiler ->
-                println()
-                println("Loop Profiles:")
-                println("=======================================")
-                println()
+                System.err.println()
+                System.err.println("Loop Profiles:")
+                System.err.println("=======================================")
+                System.err.println()
                 val loops = profiler.collectPostProcessedLoops().sortedByDescending { it.spentTicks }
-                loops.printLoops()
+                loops.printLoops(System.err)
             }
 
             system.cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
-                println()
-                println("CGRA Loop Profiles:")
-                println("=======================================")
-                println("Loops in $kernel")
-                println("---------------------------------------")
-                profiles.print()
+                System.err.println()
+                System.err.println("CGRA Loop Profiles:")
+                System.err.println("=======================================")
+                System.err.println("Loops in $kernel")
+                System.err.println("---------------------------------------")
+                profiles.print(System.err)
             }
         }
     }
