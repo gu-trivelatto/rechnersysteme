@@ -197,7 +197,10 @@ abstract class BaseRunnerCommand {
         cfgOpt {
             dumpSerCfg = options.createCgraRefImage
             intrinsics {
-                useAll()
+                register("cosf")
+                register("sinf")
+                register("absf")
+                // do not add memcpy, memset, because they have no CFG impl. If they are called, we would fail inlining. Only CFGSim works for those right now
             }
 
             configureKernelOptimization()
