@@ -14,6 +14,11 @@ import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
 import scar.Format
 
+/**
+ * Use this CGRA-Config for the performance focussed variant. Use of this "performance" config is already configured in all tests.
+ *
+ * You can copy from or compare with the Std CGRAs as you wish.
+ */
 class PerformanceFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "performance"

@@ -11,6 +11,11 @@ import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import scar.Format
 
+/**
+ * Use this CGRA-Config for the energy efficient variant. Use of this "efficiency" config is already configured in all tests.
+ *
+ * You can copy from or compare with the Std CGRAs as you wish.
+ */
 class EfficiencyFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "efficiency"

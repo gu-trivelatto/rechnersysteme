@@ -5,12 +5,13 @@ import ch.qos.logback.classic.Logger
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.converters.PathConverter
+import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.igraph.opt.GenericCfgOptimizationConfig
-import de.tu_darmstadt.rs.cgra.igraph.opt.loops.PrefetchingConfig
+import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
+import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
 import de.tu_darmstadt.rs.cgra.simulator.impl.testing.loggingConfigs.configureStdCgraLogging
-import de.tu_darmstadt.rs.cgra.synthesis.builder.applyUnrolling
 import de.tu_darmstadt.rs.cgra.synthesis.kernel.WriteLocCompression
 import de.tu_darmstadt.rs.cgra.synthesis.testing.enableScarAssertions
 import de.tu_darmstadt.rs.disasm.executable.IExecutableBinary
@@ -20,6 +21,8 @@ import de.tu_darmstadt.rs.memoryTracer.MemoryTracer
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.parseToKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.debugging.GdbSimulationDriver
+import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
+import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.ICfgManagerBuilder
@@ -90,7 +93,7 @@ abstract class BaseRunnerCommand {
     var help: Boolean = false
 
 
-    protected fun configureLogging(sim: ISystemSimulator, system: IRvSystem, excluseCgra: Boolean) {
+    protected fun configureLogging(sim: ISystemSimulator, system: IRvSystem, excludeCgra: Boolean) {
         if (logSyscalls) {
             (slf4j<BaseSyscallHandler>() as Logger).level = Level.toLevel("trace")
             (slf4j<ECallExecutor>() as Logger).level = Level.toLevel("trace")
@@ -121,7 +124,7 @@ abstract class BaseRunnerCommand {
                             +"fpRegs"
                         }
                     }
-                    if (system.cgra != null && !excluseCgra) {
+                    if (system.cgra != null && !excludeCgra) {
                         container("cgra") {
                             configureStdCgraLogging()
                         }
@@ -141,18 +144,34 @@ abstract class BaseRunnerCommand {
         else -> VariableInsnLengthElfLoader.DisasmType.AsYouGo
     }
 
-    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions) {
-        val requireCgra = options.accelerateAot
+    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions, requireCgra: Boolean, loopProfiler: ILoopProfiler? = null) {
 
         if (requireCgra) {
             val cgraName = options.cgra
             val provider = CgraModelLoader.loadSchedulerModelByName(cgraName) ?: throw ParameterException("cgraConfig $cgraName not found!")
             val model = provider()
+            model.verifyRs2Constraints()
             System.err.println("Using Cgra-Config: ${model.name}")
             cgraAcceleration(model) {
                 val cgraVcdOut = options.cgraVcdOutput
-                configureCgra(this@configureCgraIfNeeded.executable, options, simCgraWithHook = cgraVcdOut || options.createCgraRefImage, generateCgraWaveForms = cgraVcdOut)
+                configureCgraAcceleration(
+                    this@configureCgraIfNeeded.executable,
+                    options,
+                    simCgraWithHook = cgraVcdOut || options.createCgraRefImage,
+                    generateCgraWaveForms = cgraVcdOut,
+                    loopProfiler
+                )
             }
+        }
+    }
+
+    private fun ICgraSchedulerModel.verifyRs2Constraints() {
+        check(bitWidth == 32)
+        check(this.dataPes.count { it.hasMemoryAccess } <= 4) { "Cannot use more than 4 Memory Ports" }
+
+        val contextCount = this.getLcuForComponent(0).contextCount ?: error("CtxCount missing!")
+        if (contextCount > 8192) {
+            System.err.println("WARNING: Excessive Context Count of $contextCount: Please check whether the total amount of required memory is still reasonable and justify this in your report!")
         }
     }
 
@@ -162,15 +181,16 @@ abstract class BaseRunnerCommand {
         unrollingFactors(4, 8)
     }
 
-    private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgra(
+    private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgraAcceleration(
         elf: IExecutableBinary<*, *>,
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
-        generateCgraWaveForms: Boolean
+        generateCgraWaveForms: Boolean,
+        loopProfiler: ILoopProfiler?
     ) {
         synthOutputPath = debugOutputDir
 
-        val kernels = options.kernels.map { kernelId ->
+        val manuallySelectedKernels = options.kernels.map { kernelId ->
             kernelId.parseToKernelDescriptor(elf)
         }
 
@@ -193,7 +213,7 @@ abstract class BaseRunnerCommand {
                 dumpReferenceLiveValues = true
 
                 if (options.createCgraRefImage) {
-                    kernels
+                    manuallySelectedKernels
                         .filterIsInstance<NativeKernelDescriptor.FunctionKernelDescriptor>()
                         .forEach {
                             applyMemoryTracer(
@@ -236,42 +256,36 @@ abstract class BaseRunnerCommand {
 //                        }
                 }
 
-//                    if (memTracerFactory != null) {
-//                        applyMemoryTracer(
-//                            kernelInfo.functionName,
-//                            memTracerFactory.invoke(
-//                                outputDir.resolve("cgraMemory.trace")
-//                                    .takeIf { generateMemoryTraceFiles })
-//                        )
-//                    }
-
                 enableScarAssertions()
             }
         }
-//            useCfgSimOnly {
-//                if (memTracerFactory != null) {
-//                    applyMemoryTracer(
-//                        kernelInfo.functionName,
-//                        memTracerFactory.invoke(
-//                            outputDir.resolve("cfgMemory.trace")
-//                                .takeIf { generateMemoryTraceFiles })
-//                    )
-//                }
-//
-//                dumpReferenceLiveValues = true
-//
-//                loopProfiling = true
-//            }
 
-        forceUseSlowKernels = kernels.isNotEmpty()
         throwSynthesisErrors = true
 
-        aotAcceleration {
-            kernels.forEach {
-                accelerate(it)
-            }
-        }
+        configureAcceleration(this, manuallySelectedKernels, loopProfiler)
+    }
 
+    protected open fun configureAcceleration(
+        mgmt: IAccelerationManagerBuilder<RvArchInfo>,
+        manuallySelectedKernels: Collection<NativeKernelDescriptor>,
+        loopProfiler: ILoopProfiler?
+    ) {
+
+        mgmt.apply {
+
+            loopProfiler?.let {
+                mgmt.importLoopProfiles(it)
+            }
+
+            mgmt.forceUseSlowKernels = manuallySelectedKernels.isNotEmpty()
+
+            mgmt.aotAcceleration {
+                manuallySelectedKernels.forEach {
+                    this.accelerate(it)
+                }
+            }
+
+        }
     }
 
     protected fun RvSystemBuilder.configureMemory() {
@@ -324,6 +338,28 @@ abstract class BaseRunnerCommand {
             runFullProgramWithDebugging(system, timeout, port = debuggerPort, waitForDebugger = true)
         } else {
             runFullProgram(timeout)
+        }
+    }
+
+    protected fun IRvSystem.printCgraProfilesIfPresent() {
+        cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
+            System.err.println()
+            System.err.println("CGRA Loop Profiles:")
+            System.err.println("=======================================")
+            System.err.println("Loops in $kernel")
+            System.err.println("---------------------------------------")
+            profiles.print(System.err)
+        }
+    }
+
+    protected fun IRvSystem.printLoopProfilesIfPresent() {
+        core.dispatcher.profiler?.let { profiler ->
+            System.err.println()
+            System.err.println("Loop Profiles:")
+            System.err.println("=======================================")
+            System.err.println()
+            val loops = profiler.collectPostProcessedLoops().sortedByDescending { it.spentTicks }
+            loops.printLoops(System.err)
         }
     }
 }

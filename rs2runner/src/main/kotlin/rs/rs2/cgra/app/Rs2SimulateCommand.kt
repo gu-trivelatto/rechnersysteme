@@ -7,6 +7,7 @@ import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.resourceModel.predefinedConfigs.Std4x4MatrixStar2MemCombBss256r4096cFloat
 import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
+import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureAllOperationsZeroCycle
@@ -37,6 +38,9 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
 
             configureEnvAndStdio(argsWithoutProg)
             configureMemory()
+            heapAllocator {
+                reserveMemory(RvKernelPatcher.PATCH_ALLOCATOR_ID, RvKernelPatcher.PATCH_REGION_DEFAULT_SIZE)
+            }
 
             if (fast) {
                 System.err.println("Warning: --correctnessOnly Mode. Operation and Memory Latencies artificially shortened. Tick Count not realistic!")
@@ -63,7 +67,7 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
                     enableLoopProfiling()
                 }
             }
-            configureCgraIfNeeded(cgraAccalerationOptions)
+            configureCgraIfNeeded(cgraAccalerationOptions, requireCgra = cgraAccalerationOptions.accelerateAot)
         }
     }
 
@@ -92,23 +96,9 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
             val passedTime = (stopTime - startTime).toFloat()/1000
             System.err.println("Real Time: $passedTime s")
 
-            system.core.dispatcher.profiler?.let { profiler ->
-                System.err.println()
-                System.err.println("Loop Profiles:")
-                System.err.println("=======================================")
-                System.err.println()
-                val loops = profiler.collectPostProcessedLoops().sortedByDescending { it.spentTicks }
-                loops.printLoops(System.err)
-            }
+            system.printLoopProfilesIfPresent()
 
-            system.cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
-                System.err.println()
-                System.err.println("CGRA Loop Profiles:")
-                System.err.println("=======================================")
-                System.err.println("Loops in $kernel")
-                System.err.println("---------------------------------------")
-                profiles.print(System.err)
-            }
+            system.printCgraProfilesIfPresent()
         }
     }
 
