@@ -110,7 +110,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             System.err.println("Real Time: $accPassedTime s")
             System.err.println()
             val speedup = refSim.currentTick.toFloat() / accSim.currentTick
-            System.err.println("Speedup: $speedup")
+            System.err.println("Achieved Whole-Program-Speedup: $speedup")
 
             accSystem.printCgraProfilesIfPresent()
         }
