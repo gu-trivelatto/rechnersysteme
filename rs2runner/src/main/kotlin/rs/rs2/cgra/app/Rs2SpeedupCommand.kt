@@ -1,5 +1,6 @@
 package rs.rs2.cgra.app
 
+import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
@@ -7,12 +8,16 @@ import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelD
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.riscv.RvArchInfo
+import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.accelerateMostRelevant
 import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.accelerateMostRelevantFunctions
+import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.collectLoopsToFunctions
 import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32gOperationsWithCgraTiming
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
+import de.tu_darmstadt.rs.util.kotlin.hex
+import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import java.nio.file.Path
 
@@ -23,6 +28,9 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
     var cgraAccalerationOptions: CgraAccelerationOptions = CgraAccelerationOptions(
         defaultCgraName = PerformanceFocused().name
     )
+
+    @Parameter(names = ["--noAutoAcc"], description = "disables any automatic kernel selection. Only kernels manually mentioned with --kernel will by synthesized")
+    var noAutoAcc: Boolean = false
 
     fun buildSystem(exPath: Path, argsWithoutProg: List<String>, accelerationRun: Boolean, referenceILoopProfiler: ILoopProfiler?): IRvSystem {
 
@@ -126,9 +134,25 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
         check(loopProfiler != null) { "require loopProfiler!" }
 
 
-        mgmt.aotAcceleration {
-            accelerateMostRelevantFunctions(1, loopProfiler)
+        if (!noAutoAcc) {
+            mgmt.aotAcceleration {
+                val functions = collectLoopsToFunctions(loopProfiler)
+                val candidates = functions.asSequence()
+                    .filter { it.profiledTicks > 10000 }
+                    .onEach {
+                        logger.info("Picking {}:{} for acceleration. Saw {} ticks in loops", it.entryAddr.hex(), it.id, it.profiledTicks)
+                    }
+                val success = accelerateMostRelevantFunctions(3, candidates)
+
+                if (!success) {
+                    logger.error("Ran out of kernel-candidates. None of the candidates was eligable or synthesizable: {}", functions)
+                }
+            }
         }
+    }
+
+    companion object {
+        private val logger = slf4j<Rs2SpeedupCommand>()
     }
 
 }

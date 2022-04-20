@@ -21,6 +21,8 @@
 	<logger name="de.tu_darmstadt.rs.cgra.scheduling.ListScheduler" level="WARN"/>
 	<logger name="de.tu_darmstadt.rs.cgra.synthesis.CgraKernelSynthesisWithDebugging" level="INFO"/>
 
+	<logger name="rs.rs2.cgra.app.Rs2SpeedupCommand" level="INFO"/>
+
     <root level="warn">
         <appender-ref ref="STDERR"/>
     </root>

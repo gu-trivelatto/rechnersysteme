@@ -362,7 +362,7 @@ abstract class BaseRunnerCommand {
             System.err.println("Loop Profiles:")
             System.err.println("=======================================")
             System.err.println()
-            val loops = profiler.collectPostProcessedLoops().sortedByDescending { it.spentTicks }
+            val loops = profiler.collectPostProcessedLoops().filter { it.directParent == null }.sortedByDescending { it.spentTicks }
             loops.printLoops(System.err)
         }
     }
