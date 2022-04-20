@@ -50,7 +50,7 @@ set(dis_file ${PROJECT_NAME}.${ARCH}.${flagName}.dis)
 set(SOURCES
         main.c
         acquisition.h
-        acquisitionImpl.c
+        acquisition.c
         testData.h
         testData.c
         )

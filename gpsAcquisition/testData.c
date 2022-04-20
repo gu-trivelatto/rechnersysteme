@@ -29,9 +29,10 @@ static const int32_t test3Frequencies[] =  {-5500, -5000, -4500, -4000};
 
 static const testCase_t testCases[] = {
         {
-        	.complexSampleCount = 1000,
+            .complexSampleCount = 1000,
             .inputCodes = test1InputCodes,
             .inputSamples = &test1InputSamples[0][0],
+            .testFreqCount = sizeof(test1Frequencies) / sizeof (int32_t),
             .testFrequencies = test1Frequencies,
             .dopplerFrequency = 1000,
             .acquisition = false,
@@ -41,29 +42,31 @@ static const testCase_t testCases[] = {
             .gamma = 0.012647428F
         },
         {
-        	.complexSampleCount = 1000,
-        	.inputCodes = test2InputCodes,
-        	.inputSamples = &test2InputSamples[0][0],
-        	.testFrequencies = test2Frequencies,
-        	.dopplerFrequency = -5000,
-        	.acquisition = false,
-        	.codePhase = 958,
-        	.maxMagnitude = 3.4467404E-5F,
-        	.inputPower = 0.0025402682F,
-        	.gamma = 0.013568412F
-		},
-		{
-			.complexSampleCount = 1000,
-			.inputCodes = test3InputCodes,
-			.inputSamples = &test3InputSamples[0][0],
-			.testFrequencies = test3Frequencies,
-			.dopplerFrequency = -4500,
-        	.acquisition = true,
-        	.codePhase = 79,
-        	.maxMagnitude = 2.578257E-5F,
-        	.inputPower = 0.0011476198F,
-        	.gamma = 0.022466125F
-		}
+            .complexSampleCount = 1000,
+            .inputCodes = test2InputCodes,
+            .inputSamples = &test2InputSamples[0][0],
+            .testFreqCount = sizeof(test2Frequencies) / sizeof (int32_t),
+            .testFrequencies = test2Frequencies,
+            .dopplerFrequency = -5000,
+            .acquisition = false,
+            .codePhase = 958,
+            .maxMagnitude = 3.4467404E-5F,
+            .inputPower = 0.0025402682F,
+            .gamma = 0.013568412F
+        },
+        {
+            .complexSampleCount = 1000,
+            .inputCodes = test3InputCodes,
+            .inputSamples = &test3InputSamples[0][0],
+            .testFreqCount = sizeof(test3Frequencies) / sizeof (int32_t),
+            .testFrequencies = test3Frequencies,
+            .dopplerFrequency = -4500,
+            .acquisition = true,
+            .codePhase = 79,
+            .maxMagnitude = 2.578257E-5F,
+            .inputPower = 0.0011476198F,
+            .gamma = 0.022466125F
+        }
 };
 
 __attribute__((noipa))

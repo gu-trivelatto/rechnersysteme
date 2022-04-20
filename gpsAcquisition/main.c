@@ -48,7 +48,7 @@ int main(int argc, char ** argv) {
     int32_t refDopplerFreq = testCase->dopplerFrequency;
 
     printf("Starting acquisition...\n");
-    bool acquisitionResult = startAcquisition(acq, testCase->testFrequencies);
+    bool acquisitionResult = startAcquisition(acq, testCase->testFreqCount, testCase->testFrequencies);
 
     int32_t codePhase = acq->codePhase;
     int32_t dopplerFreq = acq->dopplerFrequency;
@@ -57,11 +57,11 @@ int main(int argc, char ** argv) {
     puts((passed?"PASSED":"FAILED"));
     puts("\n");
     if(!passed){
-        printf("Expected %d acquistion\n", refAcquisition);
+        printf("Expected acquistion: %d\n", refAcquisition);
         printf("Code Phase = %d\n", refCodePhase);
         printf("Doppler    = %d\n", refDopplerFreq);
 
-        printf("Got %d acquisitionResult\n", acquisitionResult);
+        printf("Got acquisitionResult: %d\n", acquisitionResult);
         printf("Code Phase = %d\n", codePhase);
         printf("Doppler    = %d\n", dopplerFreq);
     }

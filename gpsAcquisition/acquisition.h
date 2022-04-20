@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 typedef struct {
-    bool acquisition;
     int32_t codePhase;
     int32_t dopplerFrequency;
 } acquisition_t;
@@ -28,6 +27,8 @@ void enterSample(acquisition_t* acq, float real, float imag);
 void enterCode(acquisition_t* acq, float real, float imag);
 
 /**
- * the actual process of gpsAcquisition. All calculation should go here. This will be accelerated with the CGRA
+ * the actual process of gpsAcquisition. All calculation should go here. This will be accelerated with the CGRA.
+ *
+ * @return whether acquisition was achieved or not
  */
-bool startAcquisition(acquisition_t* acq, const int32_t* testFrequencies);
+bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t testFrequencies[testFreqCount]);

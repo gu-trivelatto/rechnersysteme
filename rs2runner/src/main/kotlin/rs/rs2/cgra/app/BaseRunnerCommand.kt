@@ -264,7 +264,7 @@ abstract class BaseRunnerCommand {
             }
         }
 
-        throwSynthesisErrors = true
+        throwSynthesisErrors = false
 
         configureAcceleration(this, manuallySelectedKernels, loopProfiler)
     }

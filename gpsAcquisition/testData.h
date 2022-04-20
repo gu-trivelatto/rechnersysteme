@@ -4,9 +4,10 @@
 #include <stdint.h>
 
 typedef struct {
-	int32_t complexSampleCount;
+    int32_t complexSampleCount;
     const float* inputCodes;
     const float* inputSamples;
+    int32_t testFreqCount;
     const int32_t* const testFrequencies;
     int32_t dopplerFrequency;
     bool acquisition;
