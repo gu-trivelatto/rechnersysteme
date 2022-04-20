@@ -4,28 +4,42 @@
 #include <stdio.h>
 #include "testData.h"
 #include "acquisition.h"
+#include <stdlib.h>
+#include <errno.h>
 
-volatile int32_t configTestCaseId = 0;
-volatile int32_t configNrOfSamples = 1000;
-
-
+/**
+ * All Args optional.
+ * If present argv[1] = testCaseId
+ * If present argv[2] = nrOfSamples
+ */
 int main(int argc, char ** argv) {
-    int32_t testCaseId = configTestCaseId;
-    int32_t nrOfSamples = configNrOfSamples;
+	int32_t testCaseId = 0; // Default Test-Case without any args
+
+	if (argc >= 2) {
+		testCaseId = strtol(argv[1], NULL, 10);
+	}
+
+	const testCase_t* testCase = getTestCase(testCaseId);
+
+	int32_t nrOfSamples;
+	if (argc >= 3) {
+		nrOfSamples = strtol(argv[2], NULL, 10);
+		printf("Overriding to %ld samples\n", nrOfSamples);
+	} else {
+		nrOfSamples = testCase->complexSampleCount;
+	}
 
     acquisition_t * acq = allocateAcquisition(nrOfSamples);
 
-    testCase_t* testCase = &testCases[testCaseId];
     for(int i = 0; i < 2*nrOfSamples; i+=2){
         float real = testCase->inputSamples[i];
         float imag = testCase->inputSamples[i+1];
         enterSample(acq, real, imag);
     }
 
-    float* inputCodes = testCase->inputCodes;
     for(int i = 0; i < 2*nrOfSamples; i+=2){
-        float real = inputCodes[i];
-        float imag = inputCodes[i+1];
+        float real = testCase->inputCodes[i];
+        float imag = testCase->inputCodes[i+1];
         enterCode(acq, real, imag);
     }
 
@@ -54,5 +68,5 @@ int main(int argc, char ** argv) {
 
     deleteAcquisition(acq);
 
-    return passed? 1 : 0;
+    return passed? 0 : 1;
 }

@@ -93,10 +93,12 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
             System.err.println("========= End Of Simulation ===========")
             System.err.println("Tick Count: ${sim.currentTick}")
             val stopTime = System.currentTimeMillis()
-            val passedTime = (stopTime - startTime).toFloat()/1000
+            val passedTime = (stopTime - startTime).toFloat() / 1000
             System.err.println("Real Time: $passedTime s")
 
             system.printLoopProfilesIfPresent()
+
+            system.printCgraExecutionsIfPresent()
 
             system.printCgraProfilesIfPresent()
         }

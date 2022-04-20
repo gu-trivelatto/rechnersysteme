@@ -6,6 +6,8 @@ import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelP
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
+import de.tu_darmstadt.rs.cgra.scheduling.flow.fullInterconnect
+import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixInterconnect
 import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixStarInterconnect
 import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
@@ -25,8 +27,12 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
 
     override fun invoke(): ICgraHdlGenerationModel {
         val grid = PeGrid(4, 4)
+        // PeCube(3, 3, 3)
 
+//        grid.matrixInterconnect()
         grid.matrixStarInterconnect()
+//        grid.fullInterconnect()
+        // see [IrregularInterconnect] for completely custom interconnects
 
         return grid.cgraConfigurator(name) {
 
@@ -75,6 +81,7 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
             }
 
             applyCboxRegFileSize(64)
+            applyCBoxEvalBlockCount(2)
             applyPeRegFileSize(256)
             applyLcuConfiguration {
                 memorySize = 4096

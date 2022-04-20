@@ -4,9 +4,10 @@
 #include <stdint.h>
 
 typedef struct {
-    float* inputCodes;
-    float* inputSamples;
-    int32_t* testFrequencies;
+	int32_t complexSampleCount;
+    const float* inputCodes;
+    const float* inputSamples;
+    const int32_t* const testFrequencies;
     int32_t dopplerFrequency;
     bool acquisition;
     int32_t codePhase;
@@ -15,4 +16,9 @@ typedef struct {
     float gamma;
 } testCase_t;
 
-extern testCase_t testCases[];
+/**
+ * Requests testData.
+ * May be hooked by simulator to check / mock / replace test-data
+ */
+__attribute__((noipa))
+const testCase_t* getTestCase(int testId);

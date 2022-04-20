@@ -30,4 +30,4 @@ void enterCode(acquisition_t* acq, float real, float imag);
 /**
  * the actual process of gpsAcquisition. All calculation should go here. This will be accelerated with the CGRA
  */
-bool startAcquisition(acquisition_t* acq, int32_t* testFrequencies);
+bool startAcquisition(acquisition_t* acq, const int32_t* testFrequencies);

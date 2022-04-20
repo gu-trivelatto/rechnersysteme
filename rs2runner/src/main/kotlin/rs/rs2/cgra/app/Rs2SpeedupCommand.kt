@@ -2,6 +2,7 @@ package rs.rs2.cgra.app
 
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
+import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
@@ -111,6 +112,8 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             System.err.println()
             val speedup = refSim.currentTick.toFloat() / accSim.currentTick
             System.err.println("Achieved Whole-Program-Speedup: $speedup")
+
+            accSystem.printCgraExecutionsIfPresent()
 
             accSystem.printCgraProfilesIfPresent()
         }

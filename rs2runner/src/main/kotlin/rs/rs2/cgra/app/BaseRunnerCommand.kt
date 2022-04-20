@@ -6,6 +6,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.converters.PathConverter
 import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
+import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
 import de.tu_darmstadt.rs.cgra.igraph.opt.GenericCfgOptimizationConfig
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
@@ -363,6 +364,17 @@ abstract class BaseRunnerCommand {
             System.err.println()
             val loops = profiler.collectPostProcessedLoops().sortedByDescending { it.spentTicks }
             loops.printLoops(System.err)
+        }
+    }
+
+    protected fun IRvSystem.printCgraExecutionsIfPresent() {
+        val cgra = cgra
+        val execStats = cgra?.kernelStats
+        if (execStats?.isNotEmpty() == true) {
+            System.err.println()
+            System.err.println("CGRA Execution Stats:")
+            System.err.println("=======================================")
+            cgra.printKernelStats(System.err)
         }
     }
 }
