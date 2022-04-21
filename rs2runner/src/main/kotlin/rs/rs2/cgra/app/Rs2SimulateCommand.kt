@@ -3,22 +3,18 @@ package rs.rs2.cgra.app
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
-import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
-import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
-import de.tu_darmstadt.rs.cgra.resourceModel.predefinedConfigs.Std4x4MatrixStar2MemCombBss256r4096cFloat
-import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureAllOperationsZeroCycle
-import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32gOperationsWithCgraTiming
+import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32imfOperationsWithCgraTiming
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import java.nio.file.Path
 
 @Parameters(commandNames = ["simulate"], commandDescription = "simulate a binary. has options to enable acceleration, choose kernels or")
-class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
+class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
 
     @Parameter(names = ["--profile"], description = "Profile the execution and output the profiles after")
     var profile: Boolean = false
@@ -58,7 +54,7 @@ class Rs2SimulateCommand: BaseRunnerCommand(), Runnable {
                 core {
                     directCoreFrontEnd()
                     pipelinedScalarDispatcher()
-                    configureRv32gOperationsWithCgraTiming()
+                    configureRv32imfOperationsWithCgraTiming()
                 }
             }
             core {

@@ -37,7 +37,9 @@ import de.tu_darmstadt.rs.riscv.simulator.impl.debugging.runFullProgramWithDebug
 import de.tu_darmstadt.rs.simulator.api.ISystemSimulator
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.clock.ITicker
+import de.tu_darmstadt.rs.simulator.api.energy.energyConsumptionTree
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
+import rs.rs2.cgra.optConfig.configureKernelOptimization
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -176,12 +178,6 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    private fun ICfgManagerBuilder<*>.configureKernelOptimization() {
-        basePassConfig = GenericCfgOptimizationConfig.Default
-
-        unrollingFactors(4, 8)
-    }
-
     private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgraAcceleration(
         elf: IExecutableBinary<*, *>,
         options: CgraAccelerationOptions,
@@ -197,12 +193,6 @@ abstract class BaseRunnerCommand {
 
         cfgOpt {
             dumpSerCfg = options.createCgraRefImage
-            intrinsics {
-                register("cosf")
-                register("sinf")
-                register("absf")
-                // do not add memcpy, memset, because they have no CFG impl. If they are called, we would fail inlining. Only CFGSim works for those right now
-            }
 
             configureKernelOptimization()
         }
@@ -343,6 +333,10 @@ abstract class BaseRunnerCommand {
         } else {
             runFullProgram(timeout)
         }
+    }
+
+    protected fun IRvSystem.printEnergyUsage(ticks: Long) {
+        this.energyConsumptionTree(ticks, output = System.err)
     }
 
     protected fun IRvSystem.printCgraProfilesIfPresent() {

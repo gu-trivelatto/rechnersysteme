@@ -3,22 +3,21 @@ package rs.rs2.cgra.app
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
-import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.riscv.RvArchInfo
-import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.accelerateMostRelevant
 import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.accelerateMostRelevantFunctions
 import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.collectLoopsToFunctions
 import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
-import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32gOperationsWithCgraTiming
+import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32imfOperationsWithCgraTiming
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.util.kotlin.hex
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
+import rs.rs2.cgra.optConfig.blacklistedFromAcceleration
 import java.nio.file.Path
 
 @Parameters(commandNames = ["speedup"], commandDescription = "run 2 times, once without acceleration, once with. Report speedup")
@@ -52,7 +51,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             core {
                 directCoreFrontEnd()
                 pipelinedScalarDispatcher()
-                configureRv32gOperationsWithCgraTiming()
+                configureRv32imfOperationsWithCgraTiming()
                 detectUndefinedReturnAsProgramExit()
                 if (!accelerationRun) {
                     enableLoopProfiling()
@@ -139,13 +138,14 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
                 val functions = collectLoopsToFunctions(loopProfiler)
                 val candidates = functions.asSequence()
                     .filter { it.profiledTicks > 10000 }
+                    .filter { it.id !in blacklistedFromAcceleration }
                     .onEach {
                         logger.info("Picking {}:{} for acceleration. Saw {} ticks in loops", it.entryAddr.hex(), it.id, it.profiledTicks)
                     }
                 val success = accelerateMostRelevantFunctions(3, candidates)
 
                 if (!success) {
-                    logger.error("Ran out of kernel-candidates. None of the candidates was eligable or synthesizable: {}", functions)
+                    logger.error("Ran out of kernel-candidates. None of the candidates was eligible or synthesizable: {}", functions)
                 }
             }
         }

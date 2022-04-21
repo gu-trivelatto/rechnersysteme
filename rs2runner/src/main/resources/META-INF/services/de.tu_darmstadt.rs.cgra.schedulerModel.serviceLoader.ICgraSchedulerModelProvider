@@ -12,7 +12,7 @@ rs.rs2.cgra.cgraConfigurations.Std4x4MatrixStar1MemCombBss256r4096cInt
 rs.rs2.cgra.cgraConfigurations.Std4x4MatrixStar2MemCombBss256r4096cFloat
 
 rs.rs2.cgra.cgraConfigurations.PerformanceFocused
-rs.rs2.cgra.cgraConfigurations.EfficiencyFocused
+rs.rs2.cgra.cgraConfigurations.EnergyFocused
 
 rs.rs2.cgra.cgraConfigurations.IrregularInterconnect2MemFloat
 rs.rs2.cgra.cgraConfigurations.Toroidal4x4MatrixStar2MemFloat

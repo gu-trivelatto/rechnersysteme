@@ -1,6 +1,5 @@
 package rs.rs2.cgra.cgraConfigurations
 
-import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.hdl.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
@@ -16,11 +15,11 @@ import scar.Format
  *
  * You can copy from or compare with the Std CGRAs as you wish.
  */
-class EfficiencyFocused: ICgraSchedulerModelProvider {
+class EnergyFocused: ICgraSchedulerModelProvider {
     override val name: String
-        get() = "efficiency"
+        get() = "energy"
 
-    override fun invoke(): ICgraHdlGenerationModel {
+    override fun invoke(): ICgraHdlGenerationModel { //TODO change
         val grid = PeGrid(4, 4)
 
         grid.matrixStarInterconnect()

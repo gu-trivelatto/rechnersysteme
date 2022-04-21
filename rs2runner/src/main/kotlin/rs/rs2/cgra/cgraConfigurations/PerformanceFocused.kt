@@ -25,7 +25,7 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "performance"
 
-    override fun invoke(): ICgraHdlGenerationModel {
+    override fun invoke(): ICgraHdlGenerationModel {  //TODO change
         val grid = PeGrid(4, 4)
         // PeCube(3, 3, 3)
 
