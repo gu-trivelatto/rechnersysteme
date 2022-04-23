@@ -9,6 +9,7 @@ import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureAllOperationsZeroCycle
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32imfOperationsWithCgraTiming
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
+import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import java.nio.file.Path
@@ -63,7 +64,7 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
                     enableLoopProfiling()
                 }
             }
-            configureCgraIfNeeded(cgraAccalerationOptions, requireCgra = cgraAccalerationOptions.accelerateAot)
+            configureCgraIfNeeded(cgraAccalerationOptions, accelerate = cgraAccalerationOptions.accelerateAot)
         }
     }
 
@@ -87,10 +88,15 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
 
             System.err.println()
             System.err.println("========= End Of Simulation ===========")
-            System.err.println("Tick Count: ${sim.currentTick}")
+            val simTicks = sim.currentTick
+            System.err.println("Tick Count: $simTicks")
+            val totalEnergy = system.estimateEnergyUsage(simTicks)
+            System.err.println("Energy Used: $totalEnergy")
             val stopTime = System.currentTimeMillis()
             val passedTime = (stopTime - startTime).toFloat() / 1000
             System.err.println("Real Time: $passedTime s")
+
+            system.elaborateEnergyUsage(simTicks)
 
             system.printLoopProfilesIfPresent()
 

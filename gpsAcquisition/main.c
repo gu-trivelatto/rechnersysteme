@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <errno.h>
 
+void loadSamplesAndCodes(acquisition_t* acq, const testCase_t* testCase, int32_t nrOfSamples);
+
 /**
  * All Args optional.
  * If present argv[1] = testCaseId
@@ -31,17 +33,7 @@ int main(int argc, char ** argv) {
 
     acquisition_t * acq = allocateAcquisition(nrOfSamples);
 
-    for(int i = 0; i < 2*nrOfSamples; i+=2){
-        float real = testCase->inputSamples[i];
-        float imag = testCase->inputSamples[i+1];
-        enterSample(acq, real, imag);
-    }
-
-    for(int i = 0; i < 2*nrOfSamples; i+=2){
-        float real = testCase->inputCodes[i];
-        float imag = testCase->inputCodes[i+1];
-        enterCode(acq, real, imag);
-    }
+    loadSamplesAndCodes(acq, testCase, nrOfSamples);
 
     bool refAcquisition = testCase->acquisition;
     int32_t refCodePhase = testCase->codePhase;
@@ -69,4 +61,19 @@ int main(int argc, char ** argv) {
     deleteAcquisition(acq);
 
     return passed? 0 : 1;
+}
+
+__attribute__((noipa)) // so it never gets inlined and remains as identifiable kernel
+void loadSamplesAndCodes(acquisition_t* acq, const testCase_t* testCase, int32_t nrOfSamples) {
+    for(int i = 0; i < 2*nrOfSamples; i+=2){
+        float real = testCase->inputSamples[i];
+        float imag = testCase->inputSamples[i+1];
+        enterSample(acq, real, imag);
+    }
+
+    for(int i = 0; i < 2*nrOfSamples; i+=2){
+        float real = testCase->inputCodes[i];
+        float imag = testCase->inputCodes[i+1];
+        enterCode(acq, real, imag);
+    }
 }

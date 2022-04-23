@@ -7,7 +7,6 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.converters.PathConverter
 import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
-import de.tu_darmstadt.rs.cgra.igraph.opt.GenericCfgOptimizationConfig
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
@@ -26,7 +25,6 @@ import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
-import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.ICfgManagerBuilder
 import de.tu_darmstadt.rs.nativeSim.synthesis.patchingStrategy.builder.KernelSelection
 import de.tu_darmstadt.rs.riscv.RvArchInfo
 import de.tu_darmstadt.rs.riscv.impl.synthesis.builder.cgraAcceleration
@@ -92,6 +90,9 @@ abstract class BaseRunnerCommand {
     @Parameter(names = ["--trace-memory"], description = "Write a trace file for all memory accesses", converter = PathConverter::class)
     var traceMemory: Path? = null
 
+    @Parameter(names = ["--energy-report"], description = "Provide a detailed report about the energy consumption of the system")
+    var elaborateEnergy: Boolean = false
+
     @Parameter(names = ["-h", "--help"], description = "Print this Help to Console")
     var help: Boolean = false
 
@@ -147,14 +148,16 @@ abstract class BaseRunnerCommand {
         else -> VariableInsnLengthElfLoader.DisasmType.AsYouGo
     }
 
-    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions, requireCgra: Boolean, loopProfiler: ILoopProfiler? = null) {
+    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions, accelerate: Boolean, alwaysAttachCgra: Boolean = accelerate, loopProfiler: ILoopProfiler? = null) {
 
-        if (requireCgra) {
+        if (alwaysAttachCgra) {
             val cgraName = options.cgra
             val provider = CgraModelLoader.loadSchedulerModelByName(cgraName) ?: throw ParameterException("cgraConfig $cgraName not found!")
             val model = provider()
             model.verifyRs2Constraints()
-            System.err.println("Using Cgra-Config: ${model.name}")
+            if (accelerate) {
+                System.err.println("Using Cgra-Config: ${model.name}")
+            }
             cgraAcceleration(model) {
                 val cgraVcdOut = options.cgraVcdOutput
                 configureCgraAcceleration(
@@ -162,7 +165,8 @@ abstract class BaseRunnerCommand {
                     options,
                     simCgraWithHook = cgraVcdOut || options.createCgraRefImage,
                     generateCgraWaveForms = cgraVcdOut,
-                    loopProfiler
+                    loopProfiler,
+                    accelerate
                 )
             }
         }
@@ -183,7 +187,8 @@ abstract class BaseRunnerCommand {
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
         generateCgraWaveForms: Boolean,
-        loopProfiler: ILoopProfiler?
+        loopProfiler: ILoopProfiler?,
+        accelerate: Boolean
     ) {
         synthOutputPath = debugOutputDir
 
@@ -256,7 +261,9 @@ abstract class BaseRunnerCommand {
 
         throwSynthesisErrors = false
 
-        configureAcceleration(this, manuallySelectedKernels, loopProfiler)
+        if (accelerate) {
+            configureAcceleration(this, manuallySelectedKernels, loopProfiler)
+        }
     }
 
     protected open fun configureAcceleration(
@@ -335,8 +342,14 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    protected fun IRvSystem.printEnergyUsage(ticks: Long) {
-        this.energyConsumptionTree(ticks, output = System.err)
+    protected fun IRvSystem.elaborateEnergyUsage(ticks: Long) {
+        if (elaborateEnergy) {
+            System.err.println()
+            System.err.println("Energy Report")
+            System.err.println("=======================================")
+            System.err.println()
+            this.energyConsumptionTree(ticks, output = System.err)
+        }
     }
 
     protected fun IRvSystem.printCgraProfilesIfPresent() {

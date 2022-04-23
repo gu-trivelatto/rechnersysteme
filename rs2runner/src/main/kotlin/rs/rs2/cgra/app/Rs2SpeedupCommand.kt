@@ -14,6 +14,7 @@ import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.configuration.configureRv32imfOperationsWithCgraTiming
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
+import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.util.kotlin.hex
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
@@ -57,7 +58,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
                     enableLoopProfiling()
                 }
             }
-            configureCgraIfNeeded(cgraAccalerationOptions, accelerationRun, referenceILoopProfiler)
+            configureCgraIfNeeded(cgraAccalerationOptions, accelerate = accelerationRun, alwaysAttachCgra = true, loopProfiler = referenceILoopProfiler)
         }
     }
 
@@ -84,10 +85,15 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
 
             System.err.println()
             System.err.println("========= End Of Reference Simulation ===========")
-            System.err.println("Tick Count: ${refSim.currentTick}")
+            val refTicks = refSim.currentTick
+            System.err.println("Tick Count: $refTicks")
+            val totalEnergy = refSystem.estimateEnergyUsage(refTicks)
+            System.err.println("Energy Used: $totalEnergy")
             val stopTime = System.currentTimeMillis()
             val passedTime = (stopTime - refStartTime).toFloat() / 1000
             System.err.println("Real Time: $passedTime s")
+
+            refSystem.elaborateEnergyUsage(refTicks)
 
             refSystem.printLoopProfilesIfPresent()
         }
@@ -112,13 +118,18 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
 
             System.err.println()
             System.err.println("========= End Of Acceleration Simulation ===========")
-            System.err.println("Tick Count: ${accSim.currentTick}")
+            val accTicks = accSim.currentTick
+            System.err.println("Tick Count: $accTicks")
+            val totalEnergy = accSystem.estimateEnergyUsage(accTicks)
+            System.err.println("Energy Used: $totalEnergy")
             val accStopTime = System.currentTimeMillis()
             val accPassedTime = (accStopTime - accStartTime).toFloat() / 1000
             System.err.println("Real Time: $accPassedTime s")
             System.err.println()
-            val speedup = refSim.currentTick.toFloat() / accSim.currentTick
+            val speedup = refSim.currentTick.toFloat() / accTicks
             System.err.println("Achieved Whole-Program-Speedup: $speedup")
+
+            accSystem.elaborateEnergyUsage(accTicks)
 
             accSystem.printCgraExecutionsIfPresent()
 
