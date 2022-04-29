@@ -43,7 +43,6 @@ dependencies {
     implementation("org.slf4j:slf4j-api:$slfjVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
-//    implementation("de.tu_darmstadt.rs.risc-v:disasm:$disasmVersion")
     implementation("de.tu_darmstadt.rs.risc-v:withSynthesis:$withSynthesisVersion")
 }
 
