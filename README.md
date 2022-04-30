@@ -4,6 +4,14 @@ RS2 Cgra Runner
 
 Dieses Projekt dient als Vorlage und Testumgebung für die gpsAcuqisition aus dem Versuch 2 von RS2.
 
+Voraussetzungen
+--------------------------------------
+
+Um den C-Code zu kompilieren wird Make, CMake und die RISC-V GNU Toolchain mit Newlib und RV32IMFC Support benötigt. Die ist auf allen Praktikumsrechnern bereits vorinstalliert und geladen und kann auf sonstigen Rechnersysteme Accounts mit dem Befehl `module load gcc/rv32imfc.22.04` geladen werden.
+
+Für das Gradle Projekt wird mindestens ein JDK ab Java 8 benötigt um Gradle auszuführen. Der eigentliche Code wird aber mit Java 17 kompiliert und ausgeführt. Wenn Gradle kein JDK 17 auf dem PC findet, wird es selbst eines herunterladen. Alle anderen notwendigen Libraries werden auch von Gradle verwaltet.
+
+
 GpsAcquisition Vorlage
 --------------------------------------
 
@@ -161,3 +169,32 @@ Die Abgabe wird im Hauptordner mit `./gradlew abgabe` erzeugt. Die Abgabe enthä
 Im C-Code darf nur die acquisition.c und CMakeLists.txt für etwaige Compiler-Optionen und zusätzliche Dateien geändert werden. Wenn sie zusätzliche Dateien schreiben werden diese auch mit abgegeben.
 
 Im rs2Runner sind nur die beiden CGRA-Konfigurationen EnergyFocused.kt und PerformanceFocuses.kt und die Optimierungskonfiguration (cfgOptConfig.kt) enthalten, da nur diese Dateien geändert werden sollen. Die Klassennamen und Namen der CGRA-Konfigurationen dürfen nicht geändert werden, damit die ausgelieferten Tests weiterhin funktionieren.
+
+
+Eigene Compiler Toolchain bauen
+------------------------------
+Um den Compiler auf anderen Rechnern verwenden zu können. Auf RS Rechnern nicht nötig.
+
+Um die Toolchain aus dem Praktikum selbst zu bauen:
+https://github.com/riscv-collab/riscv-gnu-toolchain auschecken auf Tag '2022.04.12'.
+`git submodule update --init --recursive` ausführen.
+
+Im submodule riscv-gdb manuell branch 'riscv-binutils-2.38' auschecken, ältere Versionen sind nicht kompatibel.
+
+Prerequisites nach Anleitung im Git installieren.
+
+```
+./configure --prefix=/opt/rv32imfc --with-arch=rv32imfc --with-abi=ilp32f
+```
+konfiguriert die Toolchain für die im Praktikum mindestens notwendige Architektur. Unsere Toolchain ist allerdings noch für weitere Architekturen gebaut, der Befehl
+
+```
+./configure --prefix=/opt/rv32imfc --with-arch=rv32imfc --with-abi=ilp32f --with-multilib-generator="rv32im-ilp32--;rv32imc-ilp32--;rv32imf-ilp32f--;rv32imfc-ilp32f--"
+```
+konfiguriert die Toolchain exakt wie im Praktikum.
+
+Mit
+```
+make newlib -j [thread-anzahl]
+```
+wird dann anschließend alles kompiliert und in den Zielpfad `/opt/rv32imfc` installiert.
