@@ -3,6 +3,7 @@ package rs.rs2.cgra.app
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
+import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.INativeAccelerationManager
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
@@ -146,24 +147,28 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
 
         if (!noAutoAcc) {
             mgmt.aotAcceleration {
-                val functions = collectLoopsToFunctions(loopProfiler)
-                val candidates = functions.asSequence()
-                    .filter { it.profiledTicks > 10000 }
-                    .filter { it.id !in blacklistedFromAcceleration }
-                    .onEach {
-                        logger.info("Picking {}:{} for acceleration. Saw {} ticks in loops", it.entryAddr.hex(), it.id, it.profiledTicks)
-                    }
-                val success = accelerateMostRelevantFunctions(3, candidates)
-
-                if (!success) {
-                    logger.error("Ran out of kernel-candidates. None of the candidates was eligible or synthesizable: {}", functions)
-                }
+                autoAccelerate(loopProfiler)
             }
         }
     }
 
     companion object {
-        private val logger = slf4j<Rs2SpeedupCommand>()
+        internal val logger = slf4j<Rs2SpeedupCommand>()
     }
 
+}
+
+fun INativeAccelerationManager.autoAccelerate(loopProfiler: ILoopProfiler) {
+    val functions = collectLoopsToFunctions(loopProfiler)
+    val candidates = functions.asSequence()
+        .filter { it.profiledTicks > 10000 }
+        .filter { it.id !in blacklistedFromAcceleration }
+        .onEach {
+            Rs2SpeedupCommand.logger.info("Picking {}:{} for acceleration. Saw {} ticks in loops", it.entryAddr.hex(), it.id, it.profiledTicks)
+        }
+    val success = accelerateMostRelevantFunctions(3, candidates)
+
+    if (!success) {
+        Rs2SpeedupCommand.logger.error("Ran out of kernel-candidates. None of the candidates was eligible or synthesizable: {}", functions)
+    }
 }

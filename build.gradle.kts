@@ -6,6 +6,36 @@ plugins {
     id("org.jetbrains.dokka") version "1.6.20" apply false
 }
 
+tasks {
+    create<Zip>("abgabe") {
+        group = "RS2"
+        description = "Die Abgabe fuer Moodle in abgabe.zip packen. Enthält nur Dateien der Modifikation für die Abgabe erlaubt ist"
+
+        archiveFileName.set("abgabe.zip")
+        destinationDirectory.set(layout.projectDirectory)
+
+        this.
+
+        from("gpsAcquisition") {
+            into("gpsAcquition")
+            exclude("build")
+            exclude("main.c")
+            exclude("acquisition.h")
+            exclude("testData.*")
+            exclude("GNU-RISCV-RV32G-newlib-Toolchain.cmake")
+            exclude("shared.additional.cmake")
+        }
+
+
+        from("rs2runner/src/main/kotlin/rs/rs2/cgra") {
+            into("rs2runner/src/main/kotlin/rs/rs2/cgra")
+            include("cgraConfigurations/EnergyFocused.kt")
+            include("cgraConfigurations/PerformanceFocused.kt")
+            include("optConfig/cfgOptConfig.kt")
+        }
+    }
+}
+
 subprojects {
 
     repositories {

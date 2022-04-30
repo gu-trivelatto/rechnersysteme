@@ -172,16 +172,6 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    private fun ICgraSchedulerModel.verifyRs2Constraints() {
-        check(bitWidth == 32)
-        check(this.dataPes.count { it.hasMemoryAccess } <= 4) { "Cannot use more than 4 Memory Ports" }
-
-        val contextCount = this.getLcuForComponent(0).contextCount ?: error("CtxCount missing!")
-        if (contextCount > 8192) {
-            System.err.println("WARNING: Excessive Context Count of $contextCount: Please check whether the total amount of required memory is still reasonable and justify this in your report!")
-        }
-    }
-
     private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgraAcceleration(
         elf: IExecutableBinary<*, *>,
         options: CgraAccelerationOptions,
@@ -351,37 +341,47 @@ abstract class BaseRunnerCommand {
             this.energyConsumptionTree(ticks, output = System.err)
         }
     }
+}
 
-    protected fun IRvSystem.printCgraProfilesIfPresent() {
-        cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
-            System.err.println()
-            System.err.println("CGRA Loop Profiles:")
-            System.err.println("=======================================")
-            System.err.println("Loops in $kernel")
-            System.err.println("---------------------------------------")
-            profiles.print(System.err)
-        }
+fun IRvSystem.printCgraProfilesIfPresent() {
+    cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
+        System.err.println()
+        System.err.println("CGRA Loop Profiles:")
+        System.err.println("=======================================")
+        System.err.println("Loops in $kernel")
+        System.err.println("---------------------------------------")
+        profiles.print(System.err)
     }
+}
 
-    protected fun IRvSystem.printLoopProfilesIfPresent() {
-        core.dispatcher.profiler?.let { profiler ->
-            System.err.println()
-            System.err.println("Loop Profiles:")
-            System.err.println("=======================================")
-            System.err.println()
-            val loops = profiler.collectPostProcessedLoops().filter { it.directParent == null }.sortedByDescending { it.spentTicks }
-            loops.printLoops(System.err)
-        }
+fun IRvSystem.printLoopProfilesIfPresent() {
+    core.dispatcher.profiler?.let { profiler ->
+        System.err.println()
+        System.err.println("Loop Profiles:")
+        System.err.println("=======================================")
+        System.err.println()
+        val loops = profiler.collectPostProcessedLoops().filter { it.directParent == null }.sortedByDescending { it.spentTicks }
+        loops.printLoops(System.err)
     }
+}
 
-    protected fun IRvSystem.printCgraExecutionsIfPresent() {
-        val cgra = cgra
-        val execStats = cgra?.kernelStats
-        if (execStats?.isNotEmpty() == true) {
-            System.err.println()
-            System.err.println("CGRA Execution Stats:")
-            System.err.println("=======================================")
-            cgra.printKernelStats(System.err)
-        }
+fun IRvSystem.printCgraExecutionsIfPresent() {
+    val cgra = cgra
+    val execStats = cgra?.kernelStats
+    if (execStats?.isNotEmpty() == true) {
+        System.err.println()
+        System.err.println("CGRA Execution Stats:")
+        System.err.println("=======================================")
+        cgra.printKernelStats(System.err)
+    }
+}
+
+fun ICgraSchedulerModel.verifyRs2Constraints() {
+    check(bitWidth == 32)
+    check(this.dataPes.count { it.hasMemoryAccess } <= 4) { "Cannot use more than 4 Memory Ports" }
+
+    val contextCount = this.getLcuForComponent(0).contextCount ?: error("CtxCount missing!")
+    if (contextCount > 8192) {
+        System.err.println("WARNING: Excessive Context Count of $contextCount: Please check whether the total amount of required memory is still reasonable and justify this in your report!")
     }
 }

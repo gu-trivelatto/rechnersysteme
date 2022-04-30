@@ -14,6 +14,8 @@ group = "rs.rs2.cgra"
 val disasmVersion: String by project
 val cgraSimVersion: String by project
 val jcomUtilVersion: String by project
+val junitJupiterVersion: String by project
+val kotestVersion: String by project
 val kotlinUtilVersion: String by project
 val logbackVersion: String by project
 val resourceModelVersion: String by project
@@ -44,6 +46,28 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
     implementation("de.tu_darmstadt.rs.risc-v:withSynthesis:$withSynthesisVersion")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+    testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+}
+
+tasks {
+    test {
+        useJUnitPlatform {
+            excludeTags("extended")
+        }
+
+        systemProperty("junit.jupiter.execution.parallel.enabled", "true")
+    }
+
+    create<Test>("extendedTests") {
+        group = "verification"
+        description = "runs all tests marked 'extended'. This includes the additional test-data sets"
+
+        useJUnitPlatform() {
+            includeTags("extended")
+        }
+    }
 }
 
 class Uniquify() {
@@ -75,11 +99,6 @@ tasks {
             remapper.remap(it)
         }
         classpath = files(files)
-    }
-    test {
-        useJUnitPlatform {
-            excludeTags("slow")
-        }
     }
 }
 
