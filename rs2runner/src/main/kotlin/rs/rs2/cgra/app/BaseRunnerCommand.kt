@@ -7,6 +7,7 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.converters.PathConverter
 import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
+import de.tu_darmstadt.rs.riscv.impl.synthesis.energy.energyConsumptionTreeWithPeActivity
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
@@ -35,7 +36,6 @@ import de.tu_darmstadt.rs.riscv.simulator.impl.debugging.runFullProgramWithDebug
 import de.tu_darmstadt.rs.simulator.api.ISystemSimulator
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.clock.ITicker
-import de.tu_darmstadt.rs.simulator.api.energy.energyConsumptionTree
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.optConfig.configureKernelOptimization
 import java.nio.file.Files
@@ -338,7 +338,7 @@ abstract class BaseRunnerCommand {
             System.err.println("Energy Report")
             System.err.println("=======================================")
             System.err.println()
-            this.energyConsumptionTree(ticks, output = System.err)
+            this.energyConsumptionTreeWithPeActivity(ticks, output = System.err)
         }
     }
 }
