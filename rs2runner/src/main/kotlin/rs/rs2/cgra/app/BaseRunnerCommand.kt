@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
+import com.beust.jcommander.ParametersDelegate
 import com.beust.jcommander.converters.PathConverter
 import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
@@ -36,11 +37,18 @@ import de.tu_darmstadt.rs.riscv.simulator.impl.debugging.runFullProgramWithDebug
 import de.tu_darmstadt.rs.simulator.api.ISystemSimulator
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.clock.ITicker
+import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
+import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import rs.rs2.cgra.optConfig.configureKernelOptimization
+import java.io.PrintStream
+import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.bufferedWriter
+import kotlin.io.path.createDirectories
+import kotlin.io.path.outputStream
 
 abstract class BaseRunnerCommand {
 
@@ -82,7 +90,7 @@ abstract class BaseRunnerCommand {
     var parseEager: Boolean = false
 
     @Parameter(names = ["--simOut"], description = "Directory into which to pack simulator framework and synthesis outputs.")
-    var debugOutputDir: Path = Paths.get("simOut")
+    var debugOutputDir: Path? = Paths.get("simOut")
 
     @Parameter(names = ["--vcd"], description = "Generate Waveform for RISC-V")
     var vcdOutput: Boolean = false
@@ -95,6 +103,11 @@ abstract class BaseRunnerCommand {
 
     @Parameter(names = ["-h", "--help"], description = "Print this Help to Console")
     var help: Boolean = false
+
+    @ParametersDelegate
+    var cgraAccalerationOptions: CgraAccelerationOptions = CgraAccelerationOptions(
+        defaultCgraName = PerformanceFocused().name
+    )
 
 
     protected fun configureLogging(sim: ISystemSimulator, system: IRvSystem, excludeCgra: Boolean) {
@@ -207,7 +220,7 @@ abstract class BaseRunnerCommand {
                         .forEach {
                             applyMemoryTracer(
                                 it.id,
-                                MemoryTracer(dumpRefImage = debugOutputDir.resolve("${it.id}.refMemory.json"))
+                                MemoryTracer(dumpRefImage = debugOutputDir?.resolve("${it.id}.refMemory.json"))
                             )
                         }
                 }
@@ -281,6 +294,8 @@ abstract class BaseRunnerCommand {
 
     protected fun RvSystemBuilder.configureMemory() {
         unlimitedPagedMemory {
+            perWordStaticEnergy = 25000.0
+
             additionalInitialization {
                 val traceFile = this@BaseRunnerCommand.traceMemory
                 if (traceFile != null) {
@@ -332,13 +347,27 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    protected fun IRvSystem.elaborateEnergyUsage(ticks: Long) {
+    protected fun IRvSystem.elaborateEnergyUsage(ticks: Long, outputDir: Path?) {
         if (elaborateEnergy) {
             System.err.println()
             System.err.println("Energy Report")
             System.err.println("=======================================")
             System.err.println()
             this.energyConsumptionTreeWithPeActivity(ticks, output = System.err)
+        }
+        if (outputDir != null) {
+            outputDir.createDirectories()
+            val name = if (this.cgra != null) {
+                cgraAccalerationOptions.cgra
+            } else {
+                "noCgra"
+            }
+            PrintStream(outputDir.resolve("energyReport.${name}.txt").outputStream().buffered()).use { stream ->
+                val total = estimateEnergyUsage(ticks)
+                stream.println("Total Energy: $total")
+                stream.println()
+                this.energyConsumptionTreeWithPeActivity(ticks, output = stream)
+            }
         }
     }
 }

@@ -21,14 +21,10 @@ import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import rs.rs2.cgra.optConfig.blacklistedFromAcceleration
 import java.nio.file.Path
+import java.nio.file.Paths
 
 @Parameters(commandNames = ["speedup"], commandDescription = "run 2 times, once without acceleration, once with. Report speedup")
 class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
-
-    @ParametersDelegate
-    var cgraAccalerationOptions: CgraAccelerationOptions = CgraAccelerationOptions(
-        defaultCgraName = PerformanceFocused().name
-    )
 
     @Parameter(names = ["--noAutoAcc"], description = "disables any automatic kernel selection. Only kernels manually mentioned with --kernel will by synthesized")
     var noAutoAcc: Boolean = false
@@ -44,7 +40,6 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             heapAllocator {
                 reserveMemory(RvKernelPatcher.PATCH_ALLOCATOR_ID, RvKernelPatcher.PATCH_REGION_DEFAULT_SIZE)
             }
-
             twoLevelCacheHierarchy {
                 useDragonCoherency {
                     forceCoherencyRequestEvenIfNoSiblings = true
@@ -71,7 +66,8 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
 
         val refSystem = buildSystem(exPath, argsWithoutProg, accelerationRun = false, referenceILoopProfiler = null)
 
-        val refSim = SimulatorFramework.createSimulator(refSystem, debugOutputDir.resolve("reference"))
+        val refOutputDir = debugOutputDir?.resolve("reference")
+        val refSim = SimulatorFramework.createSimulator(refSystem, refOutputDir ?: Paths.get("."))
 
         configureLogging(refSim, refSystem, false)
 
@@ -94,7 +90,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             val passedTime = (stopTime - refStartTime).toFloat() / 1000
             System.err.println("Real Time: $passedTime s")
 
-            refSystem.elaborateEnergyUsage(refTicks)
+            refSystem.elaborateEnergyUsage(refTicks, refOutputDir)
 
             refSystem.printLoopProfilesIfPresent()
         }
@@ -104,7 +100,8 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
         val refLoopProfiler = refSystem.core.dispatcher.profiler ?: error("Should always have a LoopProfiler")
         val accSystem = buildSystem(exPath, argsWithoutProg, accelerationRun = true, referenceILoopProfiler = refLoopProfiler)
 
-        val accSim = SimulatorFramework.createSimulator(accSystem, debugOutputDir.resolve("acceleration"))
+        val accOutputDir = debugOutputDir?.resolve("acceleration")
+        val accSim = SimulatorFramework.createSimulator(accSystem, accOutputDir ?: Paths.get("."))
 
         configureLogging(accSim, accSystem, false)
 
@@ -130,7 +127,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             val speedup = refSim.currentTick.toFloat() / accTicks
             System.err.println("Achieved Whole-Program-Speedup: $speedup")
 
-            accSystem.elaborateEnergyUsage(accTicks)
+            accSystem.elaborateEnergyUsage(accTicks, accOutputDir)
 
             accSystem.printCgraExecutionsIfPresent()
 

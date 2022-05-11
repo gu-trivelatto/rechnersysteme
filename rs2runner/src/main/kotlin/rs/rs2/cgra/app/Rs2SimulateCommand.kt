@@ -13,6 +13,7 @@ import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import java.nio.file.Path
+import java.nio.file.Paths
 
 @Parameters(commandNames = ["simulate"], commandDescription = "simulate a binary. has options to enable acceleration, choose kernels or")
 class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
@@ -22,11 +23,6 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
 
     @Parameter(names = ["--correctnessOnly"], description = "Ignore memory and compute latencies to simulate faster. Clock cycles will be unrealistic")
     var fast: Boolean = false
-
-    @ParametersDelegate
-    var cgraAccalerationOptions: CgraAccelerationOptions = CgraAccelerationOptions(
-        defaultCgraName = PerformanceFocused().name
-    )
 
     fun buildSystem(exPath: Path, argsWithoutProg: List<String>): IRvSystem {
         val disasmType = getDisasmType()
@@ -73,7 +69,7 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
 
         val system = buildSystem(exPath, argsWithoutProg)
 
-        val sim = SimulatorFramework.createSimulator(system, debugOutputDir)
+        val sim = SimulatorFramework.createSimulator(system, debugOutputDir ?: Paths.get("."))
 
         configureLogging(sim, system, cgraAccalerationOptions.cgraVcdOutput)
 
@@ -96,7 +92,7 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
             val passedTime = (stopTime - startTime).toFloat() / 1000
             System.err.println("Real Time: $passedTime s")
 
-            system.elaborateEnergyUsage(simTicks)
+            system.elaborateEnergyUsage(simTicks, debugOutputDir)
 
             system.printLoopProfilesIfPresent()
 
