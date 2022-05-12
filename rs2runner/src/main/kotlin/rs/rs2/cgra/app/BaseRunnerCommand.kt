@@ -10,6 +10,8 @@ import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
 import de.tu_darmstadt.rs.riscv.impl.synthesis.energy.energyConsumptionTreeWithPeActivity
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
+import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.printLoopTable
+import de.tu_darmstadt.rs.cgra.impl.memory.ByteAddressedCgraCachePort
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
@@ -38,15 +40,16 @@ import de.tu_darmstadt.rs.simulator.api.ISystemSimulator
 import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.clock.ITicker
 import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
+import de.tu_darmstadt.rs.simulator.components.memoryModel.caches.dataless.BaseSuspendingDatalessLatencyModel
+import de.tu_darmstadt.rs.simulator.components.memoryModel.caches.dataless.CoherentSuspendingLatencyModel
+import de.tu_darmstadt.rs.simulator.components.memoryModel.coherencyManagement.BaseCoherencyManager
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import rs.rs2.cgra.optConfig.configureKernelOptimization
 import java.io.PrintStream
-import java.io.PrintWriter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.bufferedWriter
 import kotlin.io.path.createDirectories
 import kotlin.io.path.outputStream
 
@@ -148,9 +151,15 @@ abstract class BaseRunnerCommand {
                     }
                 }
                 allElements {
-                    if (this.elem is ZeroLatencyByteAddressedCgraMemoryPort) {
-                        logAll()
+                    when (this.elem) {
+                        is BaseSuspendingDatalessLatencyModel<*,*> -> {
+                            logAll()
+                        }
+                        is BaseCoherencyManager<*,*,*> -> {
+                            logAll()
+                        }
                     }
+
                 }
             }
         }
@@ -294,7 +303,7 @@ abstract class BaseRunnerCommand {
 
     protected fun RvSystemBuilder.configureMemory() {
         unlimitedPagedMemory {
-            perWordStaticEnergy = 25000.0
+            staticEnergyPerTick = 25.0
 
             additionalInitialization {
                 val traceFile = this@BaseRunnerCommand.traceMemory
@@ -373,13 +382,16 @@ abstract class BaseRunnerCommand {
 }
 
 fun IRvSystem.printCgraProfilesIfPresent() {
-    cgra?.commonLoopProfiler?.recordedProfiles?.forEach { (kernel, profiles) ->
+    val recordedProfiles = cgra?.commonLoopProfiler?.recordedProfiles
+    if (recordedProfiles?.isNotEmpty() == true) {
         System.err.println()
         System.err.println("CGRA Loop Profiles:")
         System.err.println("=======================================")
-        System.err.println("Loops in $kernel")
-        System.err.println("---------------------------------------")
-        profiles.print(System.err)
+        recordedProfiles.forEach { (kernel, profiles) ->
+            System.err.println("Loops in $kernel")
+            System.err.println("---------------------------------------")
+            profiles.printLoopTable(System.err)
+        }
     }
 }
 
