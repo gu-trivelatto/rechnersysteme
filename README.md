@@ -7,7 +7,7 @@ Dieses Projekt dient als Vorlage und Testumgebung für die gpsAcuqisition aus de
 Voraussetzungen
 --------------------------------------
 
-Um den C-Code zu kompilieren wird Make, CMake und die RISC-V GNU Toolchain mit Newlib und RV32IMFC Support benötigt. Die ist auf allen Praktikumsrechnern bereits vorinstalliert und geladen und kann auf sonstigen Rechnersysteme Accounts mit dem Befehl `module load gcc/rv32imfc.22.04` geladen werden.
+Um den C-Code zu kompilieren wird Make, CMake und die RISC-V GNU Toolchain mit Newlib und RV32IMFC Support benötigt. Die ist auf allen Praktikumsrechnern bereits vorinstalliert und geladen und kann auf sonstigen Rechnersysteme Accounts mit dem Befehl `module load gcc/rv32imfc/2022.04.12` geladen werden.
 
 Für das Gradle Projekt wird mindestens ein JDK ab Java 8 benötigt um Gradle auszuführen. Der eigentliche Code wird aber mit Java 17 kompiliert und ausgeführt. Wenn Gradle kein JDK 17 auf dem PC findet, wird es selbst eines herunterladen. Alle anderen notwendigen Libraries werden auch von Gradle verwaltet.
 
