@@ -45,6 +45,7 @@ import de.tu_darmstadt.rs.simulator.components.memoryModel.caches.dataless.Coher
 import de.tu_darmstadt.rs.simulator.components.memoryModel.coherencyManagement.BaseCoherencyManager
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
+import rs.rs2.cgra.optConfig.configureCgraSynthesis
 import rs.rs2.cgra.optConfig.configureKernelOptimization
 import java.io.PrintStream
 import java.nio.file.Files
@@ -251,23 +252,7 @@ abstract class BaseRunnerCommand {
         } else {
             useMMIOSpeculativePatchingWithCheckOffload() {
 
-                cgraLoopProfiling = true
-
-                dumpAsapSchedule = true
-                dumpCgraSchedule = true
-                dumpUtilization = true
-
-                printPatchInsns = true
-
-                writeLocCompression = WriteLocCompression.All
-
-                onEachKernel { kernel ->
-//                        result(kernelInfo) {
-//                            kernel.schedulerStatistics?.let { import(it) }
-//                        }
-                }
-
-                enableScarAssertions()
+                configureCgraSynthesis()
             }
         }
 
