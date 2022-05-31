@@ -155,6 +155,16 @@ Jeder CGRA-Konfiguration enthält einen eindeutigen Namen in `name`, der dem Nam
 
 Für die Abgabe dürfen aber **ausschließlich** EnergyFocused und PerformanceFocused mit unverändertem Namen verwendet werden, damit sich alle Abgaben auf die gleiche weise öffnen lassen.
 
+### Limits der CGRA-Konfiguration
+Im Grunde können eigentlich alle Optionen genutzt werden, die geboten werden. Limitiert sind:
+
+ * ContextMemory: Wenn sie diese erhöhen müssen, begründen Sie in Ihrer Ausarbeitung, dass die BlockRAM Speicheraustattung eines Xilinx Zynq Z-7045 aureichen würde für ihre Konfiguration. Für die Schätzung: Der Kontext für ein PE passt etwa in
+   ein long - also 8 Byte. Macht bei dem von uns Vorgegebenen CGRA mit 16 PEs und 4096
+   Kontexteinträgen 8*16*4096 = 0,5 MB. Der Z-7045 hat 545 BRAMs mit je 36Kb. Wenn man davon die BRAMS für Caches, Prozessor, etc. abzieht bleiben noch 509 BRAMs übrig. Das macht in Summe ca 2MB.
+ * Speicherports: Für den CGRA sind maximal 4 PEs mit Speicherzugriff erlaubt. Mehr wäre auf einem FPGA nicht realistisch umzusetzen mit der verwendeten Cache-Kohärenten Anbindung.
+ * Cache-Größen und Prozessorkonfiguration. Diese dürfen nicht verändert werden.
+ * Konfiguration außerhalb von `cfgOptConfig.kt`, `EnergyFocused.kt` und `PerformanceFocues.kt` sollte allgemein nicht geändert werden, da nur diese 3 Dateien abgegeben werden. Änderen Sie andere Sachen, ist ihr Ergebniss nicht reproduzierbar und wird nicht akzeptiert.
+
 
 ### Optimierungskonfigurationen
 
