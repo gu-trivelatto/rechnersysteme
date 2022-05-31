@@ -166,6 +166,6 @@ fun INativeAccelerationManager.autoAccelerate(loopProfiler: ILoopProfiler) {
     val success = accelerateMostRelevantFunctions(3, candidates)
 
     if (!success) {
-        Rs2SpeedupCommand.logger.error("Ran out of kernel-candidates. None of the candidates was eligible or synthesizable: {}", functions)
+        Rs2SpeedupCommand.logger.error("Ran out of kernel-candidates. None of the candidates were eligible or synthesizable: {}", functions)
     }
 }
