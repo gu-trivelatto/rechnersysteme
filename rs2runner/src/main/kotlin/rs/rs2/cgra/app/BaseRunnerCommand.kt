@@ -47,6 +47,8 @@ import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import rs.rs2.cgra.optConfig.configureCgraSynthesis
 import rs.rs2.cgra.optConfig.configureKernelOptimization
+import rs.rs2.cgra.optConfig.configureStrategy
+import rs.rs2.cgra.optConfig.disableMemoryAliasingDetection
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -219,7 +221,11 @@ abstract class BaseRunnerCommand {
             useCgraHookExecution {
 
                 cgraLoopProfiling = true
-                kernelSelection = KernelSelection.KernelWithIntegratedGlobalSpeculation
+                kernelSelection = if (disableMemoryAliasingDetection) {
+                    KernelSelection.Safe
+                } else {
+                    KernelSelection.KernelWithIntegratedGlobalSpeculation
+                }
                 printLoopLengths = true
                 dumpCgraSchedule = true
                 dumpReferenceLiveValues = true
@@ -250,9 +256,17 @@ abstract class BaseRunnerCommand {
                 }
             }
         } else {
-            useMMIOSpeculativePatchingWithCheckOffload() {
+            if (disableMemoryAliasingDetection) {
+                useMMIOPatching {
+                    configureStrategy()
+                    configureCgraSynthesis()
+                }
+            } else {
+                useMMIOSpeculativePatchingWithCheckOffload() {
 
-                configureCgraSynthesis()
+                    configureStrategy()
+                    configureCgraSynthesis()
+                }
             }
         }
 

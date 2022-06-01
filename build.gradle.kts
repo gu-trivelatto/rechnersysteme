@@ -31,7 +31,7 @@ tasks {
             into("rs2runner/src/main/kotlin/rs/rs2/cgra")
             include("cgraConfigurations/EnergyFocused.kt")
             include("cgraConfigurations/PerformanceFocused.kt")
-            include("optConfig/cfgOptConfig.kt")
+            include("optConfig/optConfig.kt")
         }
     }
 }
