@@ -39,6 +39,7 @@ dependencies {
     implementation("de.tu_darmstadt.rs.cgra:CGRA:$resourceModelVersion")
     implementation("de.tu_darmstadt.rs.cgra:simulator-impl:$cgraSimVersion")
     implementation(testFixtures("de.tu_darmstadt.rs.cgra:simulator-impl:$cgraSimVersion"))
+    implementation(testFixtures("de.tu_darmstadt.rs.cgra:modelSimulatorAdapter:$cgraSimVersion"))
     implementation("de.tu_darmstadt.rs.cgra:synthesis-debugging:$synthesisVersion")
     implementation(testFixtures("de.tu_darmstadt.rs.cgra:synthesis-debugging:$synthesisVersion"))
 
