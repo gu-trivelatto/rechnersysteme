@@ -101,9 +101,12 @@ class EnergyFocused: ICgraSchedulerModelProvider {
 //                memoryOperators() // could be used instead of typing up above operator manually
             }
 
-            applyCboxRegFileSize(64)
-            applyPeRegFileSize(256)
-            applyLcuConfiguration {
+            useCBox {
+                regFileSize = 64
+                evalBlockCount = 1
+            }
+            setDefaultDataPeRegFileSize(256)
+            allLcus {
                 memorySize = 4096
             }
 

@@ -80,10 +80,12 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
 //                memoryOperators() // could be used instead of typing up above operator manually
             }
 
-            applyCboxRegFileSize(64)
-            applyCBoxEvalBlockCount(2)
-            applyPeRegFileSize(256)
-            applyLcuConfiguration {
+            useCBox {
+                regFileSize = 64
+                evalBlockCount = 2
+            }
+            setDefaultDataPeRegFileSize(256)
+            allLcus {
                 memorySize = 4096
             }
 

@@ -40,9 +40,12 @@ class Std2x2MatrixStar2MemCombBss256r4096cFloat : ICgraHdlGenerationModelProvide
                 memoryOperators()
             }
 
-            applyCboxRegFileSize(64)
-            applyPeRegFileSize(256)
-            applyLcuConfiguration {
+            useCBox {
+                regFileSize = 64
+                evalBlockCount = 1
+            }
+            setDefaultDataPeRegFileSize(256)
+            allLcus {
                 memorySize = 4096
             }
 

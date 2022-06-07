@@ -24,7 +24,10 @@ import rs.rs2.cgra.app.printLoopProfilesIfPresent
 import rs.rs2.cgra.app.verifyRs2Constraints
 import rs.rs2.cgra.cgraConfigurations.EnergyFocused
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
+import rs.rs2.cgra.optConfig.configureCgraSynthesis
 import rs.rs2.cgra.optConfig.configureKernelOptimization
+import rs.rs2.cgra.optConfig.configureStrategy
+import rs.rs2.cgra.optConfig.disableMemoryAliasingDetection
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -76,20 +79,20 @@ class GpsAcquisitionTests {
                     configureKernelOptimization()
                 }
 
-                useMMIOSpeculativePatchingWithCheckOffload() {
+                if (disableMemoryAliasingDetection) {
+                    useMMIOPatching {
+                        configureStrategy()
+                        configureCgraSynthesis()
+                    }
+                } else {
+                    useMMIOSpeculativePatchingWithCheckOffload() {
 
-                    cgraLoopProfiling = true
-
-                    dumpAsapSchedule = true
-                    dumpCgraSchedule = true
-                    dumpUtilization = true
-
-                    printPatchInsns = false
-
-                    writeLocCompression = WriteLocCompression.All
-
-                    enableScarAssertions()
+                        configureStrategy()
+                        configureCgraSynthesis()
+                    }
                 }
+
+                throwSynthesisErrors = false
 
                 if (accelerate) {
                     check(referenceILoopProfiler != null) { "require loopProfiler!" }
