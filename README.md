@@ -7,7 +7,7 @@ Dieses Projekt dient als Vorlage und Testumgebung für die gpsAcuqisition aus de
 Voraussetzungen
 --------------------------------------
 
-Um den C-Code zu kompilieren wird Make, CMake und die RISC-V GNU Toolchain mit Newlib und RV32IMFC Support benötigt. Die ist auf allen Praktikumsrechnern bereits vorinstalliert und geladen und kann auf sonstigen Rechnersysteme Accounts mit dem Befehl `module load gcc/rv32imfc/2022.04.12` geladen werden.
+Um den C-Code zu kompilieren wird Make, CMake und die RISC-V GNU Toolchain mit Newlib und RV32IMFC Support benötigt. Die ist auf allen RS-Rechnern bereits vorinstalliert (Der Server per X2Go. Die Rechner in Raum 350 sind leider zu alt für diese Software) und geladen und kann auf sonstigen Rechnersysteme Accounts mit dem Befehl `module load gcc/rv32imfc/2022.04.12` geladen werden.
 
 Für das Gradle Projekt wird mindestens ein JDK ab Java 8 benötigt um Gradle auszuführen. Der eigentliche Code wird aber mit Java 17 kompiliert und ausgeführt. 
 Ein solches kann auf unseres PCs mit dem Befehl `module load jdk/OpenJDK17` geladen werden. Wenn Gradle kein JDK 17 auf dem PC findet, wird es selbst eines herunterladen. Alle anderen notwendigen Libraries werden auch von Gradle verwaltet.
@@ -110,18 +110,18 @@ Der rs2Runner kann auch ohen IDE von der Kommandozeile ausgeführt werden. Entwe
 oder durch Installation des Runners mit
 ```
 ./gradlew install
-r2runner/build/install/rs2Runner/bin/rs2Runner [kommandozeilen argumente]
+r2runner/build/install/rs2Runner/bin/rs2runner [kommandozeilen argumente]
 ```
-Hierbei muss berücksichtigt werden, dass `./gradlew install` den Runner nur einmal baut. Bei jeder Änderungen im Quellcode muss diese Installation erneut durchgeführt werden um auf den aktuellen Stand gebracht zu werden. Die Ausführung durch Gradle baut alle benötigten Bestandteile neu wenn erforderlich, ist aber durch die notwendigen Anführungszeichen evtl unpraktischer. Auch führt Gradle den rs2Runner immer im rs2Runner Unterverzeichnis aus und lässt sich nur aus dem Hauptordner heraus starten. Die Installierte Variante ist hier flexibler.
+Hierbei muss berücksichtigt werden, dass `./gradlew install` den Runner nur einmal baut. Bei jeder Änderungen an der CGRA- oder Optimierungskonfiguration im rs2runner-Ordner muss diese Installation erneut durchgeführt werden, um auf den aktuellen Stand gebracht zu werden. Die Ausführung durch Gradle baut alle benötigten Bestandteile neu wenn erforderlich, ist aber durch die notwendigen Anführungszeichen evtl unpraktischer. Auch führt Gradle den rs2Runner immer im rs2Runner Unterverzeichnis aus und lässt sich nur aus dem Hauptordner heraus starten. Die Installierte Variante ist hier flexibler.
 
 ### Kommandozeilen-Optionen von rs2Runner
 
-Der rs2Runner verfügt über 2 Modi mit vielen einzelnen Optionen. Alle Optionen können mit dem Argument *-h* oder *--help* auf der Kommandozeile gelistet werden.
+Der rs2runner verfügt über 2 Modi mit vielen einzelnen Optionen. Alle Optionen können mit dem Argument *-h* oder *--help* auf der Kommandozeile gelistet werden.
 
 #### Speedup-Modus
 
 ```
-rs2Runner speedup [pfad/zu/acquisition.elf]
+rs2runner speedup [pfad/zu/acquisition.elf]
 ```
 Führt das angegebene Programm 2 mal aus. Einmal ohne CGRA um Schleifen mit hoher Rechenlast und die Referenzzahlen für Taktzahl und Energieverbrauch zu messen und anschließend mit automatischer Beschleunigung mittels CGRA. Abschließend wird der Geschwindigkeitszuwachs angegeben, sowie Statistiken zur CGRA-Nutzung. Standardmäißg der der `PerformanceFocused`-CGRA mit dem Namen `performance` verwendet. Mit dem Argument `--cgra [name]` können aber beliebige andere Konfiguration gewählt werden.
 
@@ -179,7 +179,7 @@ Die Abgabe wird im Hauptordner mit `./gradlew abgabe` erzeugt. Die Abgabe enthä
 
 Im C-Code darf nur die acquisition.c und CMakeLists.txt für etwaige Compiler-Optionen und zusätzliche Dateien geändert werden. Wenn sie zusätzliche Dateien schreiben werden diese auch mit abgegeben.
 
-Im rs2Runner sind nur die beiden CGRA-Konfigurationen EnergyFocused.kt und PerformanceFocuses.kt und die Optimierungskonfiguration (cfgOptConfig.kt) enthalten, da nur diese Dateien geändert werden sollen. Die Klassennamen und Namen der CGRA-Konfigurationen dürfen nicht geändert werden, damit die ausgelieferten Tests weiterhin funktionieren.
+Im rs2runner sind nur die beiden CGRA-Konfigurationen EnergyFocused.kt und PerformanceFocuses.kt und die Optimierungskonfiguration (cfgOptConfig.kt) enthalten, da nur diese Dateien geändert werden sollen. Die Klassennamen und Namen der CGRA-Konfigurationen dürfen nicht geändert werden, damit die ausgelieferten Tests weiterhin funktionieren.
 
 
 Eigene Compiler Toolchain bauen
