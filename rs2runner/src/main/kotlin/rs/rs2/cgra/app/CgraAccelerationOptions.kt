@@ -21,4 +21,10 @@ class CgraAccelerationOptions(
 
     @Parameter(names = ["--createCgraRefImage"], description = "Output all the required files to do standalone cgra-kernel simulations for every function-kernel. Switches to cgraHook")
     var createCgraRefImage: Boolean = false
+
+    @Parameter(names = ["--cfgSim"], description = "use CfgSim instead of cgra. Bypasses scheduling, cgra & coherency simulation to check if the CFG was already incorrect. Will use hooks to insert CFG simulation.")
+    var cfgSim: Boolean = false
+
+    @Parameter(names = ["--cgraHook"], description = "use CgraHook instead of builtin cgra. Bypasses patches and coherency simulation.")
+    var cgraHook: Boolean = false
 }

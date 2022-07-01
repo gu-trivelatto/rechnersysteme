@@ -107,6 +107,9 @@ abstract class BaseRunnerCommand {
     @Parameter(names = ["--energy-report"], description = "Provide a detailed report about the energy consumption of the system")
     var elaborateEnergy: Boolean = false
 
+    @Parameter(names = ["--correctnessOnly"], description = "Ignore memory and compute latencies to simulate faster. Clock cycles will be unrealistic")
+    var fast: Boolean = false
+
     @Parameter(names = ["-h", "--help"], description = "Print this Help to Console")
     var help: Boolean = false
 
@@ -173,7 +176,7 @@ abstract class BaseRunnerCommand {
         else -> VariableInsnLengthElfLoader.DisasmType.AsYouGo
     }
 
-    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions, accelerate: Boolean, alwaysAttachCgra: Boolean = accelerate, loopProfiler: ILoopProfiler? = null) {
+    protected fun RvSystemBuilder.configureCgraIfNeeded(options: CgraAccelerationOptions, accelerate: Boolean, alwaysAttachCgra: Boolean = accelerate, loopProfiler: ILoopProfiler? = null, kernelTraceConfig: KernelTraceConfig? = null) {
 
         if (alwaysAttachCgra) {
             val cgraName = options.cgra
@@ -188,10 +191,12 @@ abstract class BaseRunnerCommand {
                 configureCgraAcceleration(
                     this@configureCgraIfNeeded.executable,
                     options,
-                    simCgraWithHook = cgraVcdOut || options.createCgraRefImage,
+                    simCgraWithHook = options.cgraHook || cgraVcdOut || options.createCgraRefImage || kernelTraceConfig != null,
+                    cfgSim = options.cfgSim,
                     generateCgraWaveForms = cgraVcdOut,
-                    loopProfiler,
-                    accelerate
+                    loopProfiler = loopProfiler,
+                    accelerate = accelerate,
+                    kernelTraceConfig = kernelTraceConfig
                 )
             }
         }
@@ -201,9 +206,11 @@ abstract class BaseRunnerCommand {
         elf: IExecutableBinary<*, *>,
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
+        cfgSim: Boolean,
         generateCgraWaveForms: Boolean,
         loopProfiler: ILoopProfiler?,
-        accelerate: Boolean
+        accelerate: Boolean,
+        kernelTraceConfig: KernelTraceConfig?
     ) {
         synthOutputPath = debugOutputDir
 
@@ -217,7 +224,13 @@ abstract class BaseRunnerCommand {
             configureKernelOptimization()
         }
 
-        if (simCgraWithHook) {
+        if (cfgSim) {
+            useCfgSimOnly {
+                if (kernelTraceConfig != null) {
+                    applyMemoryTracer(kernelTraceConfig.kernel.id, kernelTraceConfig.createVerifier(debugOutputDir))
+                }
+            }
+        } else if (simCgraWithHook) {
             useCgraHookExecution {
 
                 cgraLoopProfiling = true
@@ -239,6 +252,10 @@ abstract class BaseRunnerCommand {
                                 MemoryTracer(dumpRefImage = debugOutputDir?.resolve("${it.id}.refMemory.json"))
                             )
                         }
+                }
+
+                if (kernelTraceConfig != null) {
+                    applyMemoryTracer(kernelTraceConfig.kernel.id, kernelTraceConfig.createVerifier(debugOutputDir))
                 }
 
                 if (generateCgraWaveForms) {

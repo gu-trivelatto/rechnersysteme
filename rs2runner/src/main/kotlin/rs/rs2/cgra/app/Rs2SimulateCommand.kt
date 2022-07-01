@@ -3,6 +3,7 @@ package rs.rs2.cgra.app
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import com.beust.jcommander.ParametersDelegate
+import de.tu_darmstadt.rs.memoryTracer.MemoryTracer
 import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.rvSystem
@@ -20,9 +21,6 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
 
     @Parameter(names = ["--profile"], description = "Profile the execution and output the profiles after")
     var profile: Boolean = false
-
-    @Parameter(names = ["--correctnessOnly"], description = "Ignore memory and compute latencies to simulate faster. Clock cycles will be unrealistic")
-    var fast: Boolean = false
 
     fun buildSystem(exPath: Path, argsWithoutProg: List<String>): IRvSystem {
         val disasmType = getDisasmType()

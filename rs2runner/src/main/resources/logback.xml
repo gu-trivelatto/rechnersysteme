@@ -23,6 +23,10 @@
 
 	<logger name="rs.rs2.cgra.app.Rs2SpeedupCommand" level="INFO"/>
 
+	<logger name="de.tu_darmstadt.rs.cgra.impl.components.BaseCgra" level="WARN"/>
+	<logger name="de.tu_darmstadt.rs.riscv.impl.synthesis.CfgSimExecutionHook" level="WARN"/>
+	<logger name="de.tu_darmstadt.rs.riscv.impl.synthesis.CgraExecutionHook" level="WARN"/>
+
     <root level="warn">
         <appender-ref ref="STDERR"/>
     </root>

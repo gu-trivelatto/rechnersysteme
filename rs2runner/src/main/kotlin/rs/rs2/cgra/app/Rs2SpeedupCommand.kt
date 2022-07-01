@@ -2,9 +2,11 @@ package rs.rs2.cgra.app
 
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
-import com.beust.jcommander.ParametersDelegate
+import de.tu_darmstadt.rs.memoryTracer.MemoryAccessVerifier
+import de.tu_darmstadt.rs.memoryTracer.MemoryTracer
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.INativeAccelerationManager
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelDescriptor
+import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.parseToKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.riscv.RvArchInfo
@@ -18,7 +20,6 @@ import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.util.kotlin.hex
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
-import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
 import rs.rs2.cgra.optConfig.blacklistedFromAcceleration
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -29,7 +30,10 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
     @Parameter(names = ["--noAutoAcc"], description = "disables any automatic kernel selection. Only kernels manually mentioned with --kernel will by synthesized")
     var noAutoAcc: Boolean = false
 
-    fun buildSystem(exPath: Path, argsWithoutProg: List<String>, accelerationRun: Boolean, referenceILoopProfiler: ILoopProfiler?): IRvSystem {
+    @Parameter(names = ["--memCheckKernel"], description = "use memTracer to dump and verify the first kernels memory interactions")
+    var memCheckKernel: Boolean = false
+
+    fun buildSystem(exPath: Path, argsWithoutProg: List<String>, accelerationRun: Boolean, referenceILoopProfiler: ILoopProfiler?, kernelTraceConfig: KernelTraceConfig? = null): IRvSystem {
 
         val disasmType = getDisasmType()
 
@@ -40,9 +44,14 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
             heapAllocator {
                 reserveMemory(RvKernelPatcher.PATCH_ALLOCATOR_ID, RvKernelPatcher.PATCH_REGION_DEFAULT_SIZE)
             }
-            twoLevelCacheHierarchy {
-                useDragonCoherency {
-                    forceCoherencyRequestEvenIfNoSiblings = true
+            if (fast) {
+                System.err.println("Warning: --correctnessOnly Mode. Operation and Memory Latencies artificially shortened. Tick Count not realistic!")
+                staticMemoryLatency(1)
+            } else {
+                twoLevelCacheHierarchy {
+                    useDragonCoherency {
+                        forceCoherencyRequestEvenIfNoSiblings = true
+                    }
                 }
             }
             core {
@@ -54,7 +63,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
                     enableLoopProfiling()
                 }
             }
-            configureCgraIfNeeded(cgraAccalerationOptions, accelerate = accelerationRun, alwaysAttachCgra = true, loopProfiler = referenceILoopProfiler)
+            configureCgraIfNeeded(cgraAccalerationOptions, accelerate = accelerationRun, alwaysAttachCgra = true, loopProfiler = referenceILoopProfiler, kernelTraceConfig = kernelTraceConfig)
         }
     }
 
@@ -74,10 +83,18 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
         System.err.println("======== Start Of Reference Simulation ==========")
         val refStartTime = System.currentTimeMillis()
 
+        val kernelTraceConfig = if (memCheckKernel) {
+            val kernel = cgraAccalerationOptions.kernels.first().parseToKernelDescriptor(refSystem.executable)
+            refSystem.memoryTraceSingleKernel(kernel, refOutputDir)
+        } else {
+            null
+        }
+
         try {
             refSim.runSimulatorPossiblyWithGdb(refSystem)
         } finally {
             refSystem.memory.tracer?.closeTraceFile()
+            kernelTraceConfig?.tracer?.closeTraceFile()
             refSystem.stdio.flush()
 
             System.err.println()
@@ -98,7 +115,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
         System.err.println()
         System.err.println("======== Preparing Acceleration Simulation ==========")
         val refLoopProfiler = refSystem.core.dispatcher.profiler ?: error("Should always have a LoopProfiler")
-        val accSystem = buildSystem(exPath, argsWithoutProg, accelerationRun = true, referenceILoopProfiler = refLoopProfiler)
+        val accSystem = buildSystem(exPath, argsWithoutProg, accelerationRun = true, referenceILoopProfiler = refLoopProfiler, kernelTraceConfig = kernelTraceConfig)
 
         val accOutputDir = debugOutputDir?.resolve("acceleration")
         val accSim = SimulatorFramework.createSimulator(accSystem, accOutputDir ?: Paths.get("."))
@@ -168,4 +185,47 @@ fun INativeAccelerationManager.autoAccelerate(loopProfiler: ILoopProfiler) {
     if (!success) {
         Rs2SpeedupCommand.logger.error("Ran out of kernel-candidates. None of the candidates were eligible or synthesizable: {}", functions)
     }
+}
+
+class KernelTraceConfig(
+    val kernel: NativeKernelDescriptor,
+    val tracer: MemoryTracer
+) {
+    var entryStackPtr: Long? = null
+
+    fun createVerifier(outputDir: Path?): MemoryAccessVerifier {
+        val verifier = MemoryAccessVerifier(tracer.addresses, outputDir?.resolve("${kernel.id}.verified.trace"))
+
+        val entryStackPtr = entryStackPtr
+        if (entryStackPtr != null) {
+            val ignoreLocalStackLowerAddr = entryStackPtr - 0x2000
+            verifier.ignoreWritesTo(ignoreLocalStackLowerAddr until entryStackPtr)
+            Rs2SpeedupCommand.logger.info(
+                "Ignoring writes to {}..{}, due kernel-local-writes being possible",
+                ignoreLocalStackLowerAddr.hex(),
+                entryStackPtr.hex()
+            )
+        }
+        return verifier
+    }
+}
+
+fun IRvSystem.memoryTraceSingleKernel(kernel: NativeKernelDescriptor, outputDir: Path?, memoryFileSuffix: String = "refMemory"): KernelTraceConfig {
+    val tracer = MemoryTracer(
+        dumpTrace = outputDir?.resolve("${kernel.id}.$memoryFileSuffix.trace"),
+        dumpRefImage = outputDir?.resolve("${kernel.id}.$memoryFileSuffix.json")
+    )
+
+    val config = KernelTraceConfig(kernel, tracer)
+
+    core.frontEnd.registerTracePoint(kernel.entryAddr, flushPipeline = true) { _ ->
+        memory.tracer = tracer
+        config.entryStackPtr = core.registerFile["sp"]
+        val returnAddr = core.dispatcher.latestReturnAddr!! // return-target from kernel
+        core.frontEnd.registerTracePoint(returnAddr) { _ ->
+            memory.tracer = null
+        }
+    }
+
+    return config
 }
