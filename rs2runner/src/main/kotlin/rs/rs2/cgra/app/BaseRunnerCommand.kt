@@ -226,8 +226,25 @@ abstract class BaseRunnerCommand {
 
         if (cfgSim) {
             useCfgSimOnly {
+                dumpReferenceLiveValues = true
+                loopProfiling = true
+
                 if (kernelTraceConfig != null) {
                     applyMemoryTracer(kernelTraceConfig.kernel.id, kernelTraceConfig.createVerifier(debugOutputDir))
+                }
+
+                if (options.createCgraRefImage) {
+                    manuallySelectedKernels
+                        .filterIsInstance<NativeKernelDescriptor.FunctionKernelDescriptor>()
+                        .forEach {
+                            applyMemoryTracer(
+                                it.id,
+                                MemoryTracer(
+                                    dumpTrace = debugOutputDir?.resolve("${it.id}.refMemory.trace"),
+                                    dumpRefImage = debugOutputDir?.resolve("${it.id}.refMemory.json")
+                                )
+                            )
+                        }
                 }
             }
         } else if (simCgraWithHook) {

@@ -194,7 +194,7 @@ class KernelTraceConfig(
     var entryStackPtr: Long? = null
 
     fun createVerifier(outputDir: Path?): MemoryAccessVerifier {
-        val verifier = MemoryAccessVerifier(tracer.addresses, outputDir?.resolve("${kernel.id}.verified.trace"))
+        val verifier = MemoryAccessVerifier(tracer.addresses, outputDir?.resolve("${kernel.id}.verified.trace"), continueAfterError = true)
 
         val entryStackPtr = entryStackPtr
         if (entryStackPtr != null) {

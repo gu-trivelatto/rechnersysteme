@@ -32,6 +32,7 @@ dependencies {
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
 
     implementation("de.tu_darmstadt.rs.util:kotlin:$kotlinUtilVersion")
+    implementation("de.tu_darmstadt.rs.util:memoryTracer:$kotlinUtilVersion")
     implementation("de.tu_darmstadt.rs.util:jcommander-util:$jcomUtilVersion")
 
     implementation("de.tu_darmstadt.rs.simulator:framework:$simFrameworkVersion")
