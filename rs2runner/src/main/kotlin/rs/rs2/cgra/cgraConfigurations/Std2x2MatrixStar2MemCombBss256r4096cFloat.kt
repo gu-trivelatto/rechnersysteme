@@ -1,9 +1,8 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.hdl.ICgraHdlGenerationModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraHdlGenerationModelProvider
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
+import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
+import de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.WrapperMemoryInfo
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid

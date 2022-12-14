@@ -1,7 +1,6 @@
 package rs.rs2.cgra.cgraConfigurations
 
-import de.tu_darmstadt.rs.cgra.schedulerModel.hdl.ICgraHdlGenerationModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraHdlGenerationModelProvider
+import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.WrapperMemoryInfo
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
@@ -14,7 +13,7 @@ import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
 import scar.Format
 
-class IrregularInterconnect2MemFloat : ICgraHdlGenerationModelProvider {
+class IrregularInterconnect2MemFloat : de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider {
     override val name: String
         get() = "irregular_interconnect_2mem_float"
 

@@ -1,7 +1,7 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.hdl.ICgraHdlGenerationModel
+import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
@@ -25,13 +25,13 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "performance"
 
-    override fun invoke(): ICgraHdlGenerationModel {  //TODO change
+    override fun invoke(): ICgraHdlGenerationModel {
         val grid = PeGrid(4, 4)
         // PeCube(3, 3, 3)
 
-//        grid.matrixInterconnect()
+    //    grid.matrixInterconnect()
         grid.matrixStarInterconnect()
-//        grid.fullInterconnect()
+    //    grid.fullInterconnect()
         // see [IrregularInterconnect] for completely custom interconnects
 
         return grid.cgraConfigurator(name) {
@@ -74,7 +74,7 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
             }
 
             // Memory PEs
-            operatorsFor(grid[2, 0], grid[1, 3]) {
+            operatorsFor(grid[2, 0], grid[1, 3], grid[0, 1], grid [3, 2]) {
                 +RandomAccessMemory(false, true, 32, true) // load and store operations in signed, unsigned, 32, 16 and 8 bit
                 // ------------ OR ----------------
 //                memoryOperators() // could be used instead of typing up above operator manually

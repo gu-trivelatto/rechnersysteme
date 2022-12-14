@@ -1,5 +1,6 @@
 package rs.rs2.cgra
 
+import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.synthesis.kernel.WriteLocCompression
 import de.tu_darmstadt.rs.cgra.synthesis.testing.enableScarAssertions
