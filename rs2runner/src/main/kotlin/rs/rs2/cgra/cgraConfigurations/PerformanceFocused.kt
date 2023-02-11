@@ -1,19 +1,13 @@
 package rs.rs2.cgra.cgraConfigurations
 
-import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import de.tu_darmstadt.rs.cgra.scheduling.flow.fullInterconnect
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixInterconnect
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixStarInterconnect
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
 import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
-import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
-import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
-import rs.rs2.cgra.operatorCollections.memoryOperators
 import scar.Format
 
 /**

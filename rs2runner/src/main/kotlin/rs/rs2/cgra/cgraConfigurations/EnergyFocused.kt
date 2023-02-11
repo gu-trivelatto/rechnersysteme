@@ -5,7 +5,7 @@ import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelP
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixStarInterconnect
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
 import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import scar.Format

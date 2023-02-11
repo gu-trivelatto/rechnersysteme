@@ -4,11 +4,10 @@ import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.WrapperMemoryInfo
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeCube
 import de.tu_darmstadt.rs.cgra.scheduling.flow.SampleCgraConfigProvider
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixInterconnect
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixInterconnect
 import model.resources.processing.operator.Trigonometric
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
@@ -49,8 +48,6 @@ class Std2x2x2Matrix2MemCombBss256r4096cInt : ICgraHdlGenerationModelProvider {
         }
     }
 
-    override fun getNativeWrapperMemoryInfo(): INativeWrapperModel {
-        return WrapperMemoryInfo(512, 512, 128)
-    }
+    override fun getNativeWrapperMemoryInfo() = SharedCgraConfig.buildWrapperConfig()
 }
 

@@ -1,17 +1,15 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.WrapperMemoryInfo
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import de.tu_darmstadt.rs.cgra.scheduling.flow.regularInterconnect
 import model.resources.processing.operator.Trigonometric
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
 import scar.Format
+import scar.ScarFormat
 
 class IrregularInterconnect2MemFloat : de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider {
     override val name: String
@@ -53,7 +51,7 @@ class IrregularInterconnect2MemFloat : de.tu_darmstadt.rs.cgra.hdlModel.serviceL
                 all32BitIntegerOperators()
                 defaultSinglePrecisionFloatOperators()
 
-                +Trigonometric.SINCOS(Format.FLOAT)
+                +Trigonometric.SINCOS(ScarFormat.FLOAT)
             }
 
             // Memory PEs
@@ -76,7 +74,5 @@ class IrregularInterconnect2MemFloat : de.tu_darmstadt.rs.cgra.hdlModel.serviceL
         return cgraModel
     }
 
-    override fun getNativeWrapperMemoryInfo(): INativeWrapperModel {
-        return WrapperMemoryInfo(512, 512, 128)
-    }
+    override fun getNativeWrapperMemoryInfo() = SharedCgraConfig.buildWrapperConfig()
 }

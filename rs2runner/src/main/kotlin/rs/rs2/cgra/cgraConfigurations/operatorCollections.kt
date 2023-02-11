@@ -1,10 +1,10 @@
 package rs.rs2.cgra.operatorCollections
 
-import de.tu_darmstadt.rs.cgra.scheduling.flow.IOperatorAdder
+import de.tu_darmstadt.rs.cgra.scheduling.flow.ILegacyOperatorAdder
 import model.resources.processing.operator.*
 import scar.Format
 
-fun IOperatorAdder.all32BitIntegerOperators() {
+fun ILegacyOperatorAdder.all32BitIntegerOperators() {
     +ADDSUB(Format.INT) // Addition, Subtraction
     +NEG(Format.INT) // K2 Negate
     +MUL(Format.INT) // Multiply
@@ -22,7 +22,7 @@ fun IOperatorAdder.all32BitIntegerOperators() {
     +I2B() // Convert Integer to Byte
 }
 
-fun IOperatorAdder.defaultSinglePrecisionFloatOperators() {
+fun ILegacyOperatorAdder.defaultSinglePrecisionFloatOperators() {
     +I2F() // Convert Integer to Float
     +F2I() // Convert Float to Integer
     +ADDSUB(Format.FLOAT) // Addition, Subtraction
@@ -33,6 +33,6 @@ fun IOperatorAdder.defaultSinglePrecisionFloatOperators() {
     +CMP(Format.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
 }
 
-fun IOperatorAdder.memoryOperators() {
+fun ILegacyOperatorAdder.memoryOperators() {
     +RandomAccessMemory(false, true, 32, true) // load and store operations in signed, unsigned, 32, 16 and 8 bit
 }

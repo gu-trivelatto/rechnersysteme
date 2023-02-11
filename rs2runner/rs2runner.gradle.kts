@@ -40,14 +40,13 @@ dependencies {
     implementation("de.tu_darmstadt.rs.cgra:CGRA:$resourceModelVersion")
     implementation("de.tu_darmstadt.rs.cgra:simulator-impl:$cgraSimVersion")
     implementation(testFixtures("de.tu_darmstadt.rs.cgra:simulator-impl:$cgraSimVersion"))
-    implementation(testFixtures("de.tu_darmstadt.rs.cgra:modelSimulatorAdapter:$cgraSimVersion"))
     implementation("de.tu_darmstadt.rs.cgra:synthesis-debugging:$synthesisVersion")
     implementation(testFixtures("de.tu_darmstadt.rs.cgra:synthesis-debugging:$synthesisVersion"))
 
     implementation("org.slf4j:slf4j-api:$slfjVersion")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
-    implementation("de.tu_darmstadt.rs.risc-v:withSynthesis:$withSynthesisVersion")
+    implementation("de.tu_darmstadt.rs.nativeSim:rvSim-withSynthesis:$withSynthesisVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
