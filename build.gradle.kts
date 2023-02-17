@@ -37,7 +37,7 @@ tasks {
 subprojects {
 
     repositories {
-        mavenLocal()
+//        mavenLocal()
         mavenCentral()
         maven {
             name = "RS Release"
