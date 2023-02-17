@@ -26,11 +26,6 @@ val withSynthesisVersion: String by project
 
 dependencies {
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-
-    // Align versions of all Kotlin components
-    implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
-
     implementation("de.tu_darmstadt.rs.util:kotlin:$kotlinUtilVersion")
     implementation("de.tu_darmstadt.rs.util:memoryTracer:$kotlinUtilVersion")
     implementation("de.tu_darmstadt.rs.util:jcommander-util:$jcomUtilVersion")

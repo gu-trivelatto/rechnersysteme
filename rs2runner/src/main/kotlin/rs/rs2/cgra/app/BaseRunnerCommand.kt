@@ -14,7 +14,7 @@ import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.printLoopTable
 import de.tu_darmstadt.rs.cgra.impl.memory.ByteAddressedCgraCachePort
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
+import de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.CgraModelLoader
 import de.tu_darmstadt.rs.cgra.simulator.impl.testing.loggingConfigs.configureStdCgraLogging
 import de.tu_darmstadt.rs.cgra.synthesis.kernel.WriteLocCompression
 import de.tu_darmstadt.rs.cgra.synthesis.testing.enableScarAssertions
@@ -30,7 +30,7 @@ import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.nativeSim.synthesis.patchingStrategy.builder.KernelSelection
-import de.tu_darmstadt.rs.riscv.RvArchInfo
+import de.tu_darmstadt.rs.riscv.disasm.cfg.RvArchitectureDescription
 import de.tu_darmstadt.rs.riscv.impl.synthesis.builder.cgraAcceleration
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.RvSystemBuilder
@@ -202,8 +202,8 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgraAcceleration(
-        elf: IExecutableBinary<*, *>,
+    private fun IAccelerationManagerBuilder<RvArchitectureDescription>.configureCgraAcceleration(
+        elf: IExecutableBinary<*, *, *>,
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
         cfgSim: Boolean,
@@ -312,7 +312,7 @@ abstract class BaseRunnerCommand {
     }
 
     protected open fun configureAcceleration(
-        mgmt: IAccelerationManagerBuilder<RvArchInfo>,
+        mgmt: IAccelerationManagerBuilder<RvArchitectureDescription>,
         manuallySelectedKernels: Collection<NativeKernelDescriptor>,
         loopProfiler: ILoopProfiler?
     ) {
