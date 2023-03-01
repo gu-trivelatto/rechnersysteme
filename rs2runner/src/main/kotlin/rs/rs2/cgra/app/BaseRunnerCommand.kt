@@ -30,7 +30,7 @@ import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.nativeSim.synthesis.patchingStrategy.builder.KernelSelection
-import de.tu_darmstadt.rs.riscv.disasm.cfg.RvArchitectureDescription
+import de.tu_darmstadt.rs.riscv.BaseRvArchDescription
 import de.tu_darmstadt.rs.riscv.impl.synthesis.builder.cgraAcceleration
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.RvSystemBuilder
@@ -202,7 +202,7 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    private fun IAccelerationManagerBuilder<RvArchitectureDescription>.configureCgraAcceleration(
+    private fun IAccelerationManagerBuilder<BaseRvArchDescription>.configureCgraAcceleration(
         elf: IExecutableBinary<*, *, *>,
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
@@ -312,7 +312,7 @@ abstract class BaseRunnerCommand {
     }
 
     protected open fun configureAcceleration(
-        mgmt: IAccelerationManagerBuilder<RvArchitectureDescription>,
+        mgmt: IAccelerationManagerBuilder<BaseRvArchDescription>,
         manuallySelectedKernels: Collection<NativeKernelDescriptor>,
         loopProfiler: ILoopProfiler?
     ) {

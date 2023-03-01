@@ -1,6 +1,7 @@
 package rs.rs2.cgra.cgraConfigurations
 
-import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
+import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
+import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
 import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
 import model.resources.processing.operator.Trigonometric
@@ -8,14 +9,13 @@ import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
-import scar.Format
 import scar.ScarFormat
 
-class IrregularInterconnect2MemFloat : de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider {
+class IrregularInterconnect2MemFloat : ICgraSchedulerModelProvider {
     override val name: String
         get() = "irregular_interconnect_2mem_float"
 
-    override fun invoke(): ICgraHdlGenerationModel {
+    override fun invoke(): ICgraSchedulerModel {
         val grid = PeGrid(2, 3)
 
         // First row directly connected

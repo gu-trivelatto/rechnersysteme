@@ -1,27 +1,20 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
-import de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.ICgraHdlGenerationModelProvider
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
-import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
-import de.tu_darmstadt.rs.cgra.scheduling.flow.SampleCgraConfigProvider
-import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
-import model.resources.processing.operator.Trigonometric
+import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
+import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
+import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
-import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
-import scar.Format
 
-
-class Std4x4MatrixStar1MemCombBss256r4096cInt : ICgraHdlGenerationModelProvider {
+class Std2x2MatrixStar2Mem1CondPe256r4096cInt : ICgraSchedulerModelProvider {
     override val name: String
-        get() = "4x4_MatrixStar_1memPorts_combBss_256r_4096c_int"
+        get() = "2x2_MatrixStar_2memPorts_1condPe_256r_4096c_int"
 
-    override fun invoke(): ICgraHdlGenerationModel {
-        val grid = PeGrid(4, 4)
+    override fun invoke(): ICgraSchedulerModel {
+        val grid = PeGrid(2, 2)
 
         grid.matrixStarInterconnect()
 
@@ -32,13 +25,12 @@ class Std4x4MatrixStar1MemCombBss256r4096cInt : ICgraHdlGenerationModelProvider 
             }
 
             // Memory PEs
-            operatorsFor(grid[2, 0]) {
+            operatorsFor(grid[0, 0], grid[1, 1]) {
                 memoryOperators()
             }
 
-            useCBox {
-                regFileSize = 64
-                evalBlockCount = 1
+            useCondPEs {
+                condPeCount = 1
             }
             setDefaultDataPeRegFileSize(256)
             allLcus {
@@ -51,3 +43,4 @@ class Std4x4MatrixStar1MemCombBss256r4096cInt : ICgraHdlGenerationModelProvider 
 
     override fun getNativeWrapperMemoryInfo() = SharedCgraConfig.buildWrapperConfig()
 }
+

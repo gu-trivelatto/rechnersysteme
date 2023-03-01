@@ -9,7 +9,7 @@ import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.NativeKernelD
 import de.tu_darmstadt.rs.nativeSim.components.accelerationManager.parseToKernelDescriptor
 import de.tu_darmstadt.rs.nativeSim.components.profiling.ILoopProfiler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
-import de.tu_darmstadt.rs.riscv.RvArchInfo
+import de.tu_darmstadt.rs.riscv.BaseRvArchDescription
 import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.accelerateMostRelevantFunctions
 import de.tu_darmstadt.rs.riscv.impl.synthesis.accelerationManager.collectLoopsToFunctions
 import de.tu_darmstadt.rs.riscv.impl.synthesis.insnPatching.RvKernelPatcher
@@ -153,7 +153,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
 
     }
 
-    override fun configureAcceleration(mgmt: IAccelerationManagerBuilder<RvArchInfo>, manuallySelectedKernels: Collection<NativeKernelDescriptor>, loopProfiler: ILoopProfiler?) {
+    override fun configureAcceleration(mgmt: IAccelerationManagerBuilder<BaseRvArchDescription>, manuallySelectedKernels: Collection<NativeKernelDescriptor>, loopProfiler: ILoopProfiler?) {
         super.configureAcceleration(mgmt, manuallySelectedKernels, loopProfiler)
 
         check(loopProfiler != null) { "require loopProfiler!" }

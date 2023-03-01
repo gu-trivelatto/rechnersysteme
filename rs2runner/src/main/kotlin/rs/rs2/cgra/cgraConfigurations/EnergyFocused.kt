@@ -1,6 +1,7 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
+import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
@@ -8,7 +9,7 @@ import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
 import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
-import scar.Format
+import scar.ScarFormat
 
 /**
  * Use this CGRA-Config for the energy efficient variant. Use of this "efficiency" config is already configured in all tests.
@@ -19,7 +20,7 @@ class EnergyFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "energy"
 
-    override fun invoke(): ICgraHdlGenerationModel { //TODO change
+    override fun invoke(): ICgraSchedulerModel {
         val grid = PeGrid(2, 4)
 
         grid.matrixStarInterconnect();
@@ -37,20 +38,20 @@ class EnergyFocused: ICgraSchedulerModelProvider {
 
             operatorsFor(unevenColumnPEs) {
                 // contents of all32BitOperators()
-                +ADDSUB(Format.INT) // Addition, Subtraction
-                +NEG(Format.INT) // K2 Negate
-                +MUL(Format.INT) // Multiply
+                +ADDSUB(ScarFormat.INT) // Addition, Subtraction
+                +NEG(ScarFormat.INT) // K2 Negate
+                +MUL(ScarFormat.INT) // Multiply
                 +DIVREMInt() // Divide, Remainder
-                +AND(Format.RAW32) // Binary And
-                +OR(Format.RAW32) // Binary Or
-                +XOR(Format.RAW32) // Binary XOr
-                +NOT(Format.RAW32) // Binary Negate
-                +CMP(Format.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-                +CMP(Format.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-                +UCMP(Format.UINT, true) //
-                +UCMP(Format.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-                +SHL(Format.INT) // Shift left
-                +SHR(Format.INT) // Shift Right (arithmetic)
+                +AND(ScarFormat.RAW32) // Binary And
+                +OR(ScarFormat.RAW32) // Binary Or
+                +XOR(ScarFormat.RAW32) // Binary XOr
+                +NOT(ScarFormat.RAW32) // Binary Negate
+                +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
+                +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
+                +UCMP(ScarFormat.UINT, true) //
+                +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
+                +SHL(ScarFormat.INT) // Shift left
+                +SHR(ScarFormat.INT) // Shift Right (arithmetic)
                 // +I2B() // Convert Integer to Byte
                 // ------------ OR ----------------
 //                all32BitIntegerOperators() // could be used instead of typing up above operators manually
@@ -59,32 +60,32 @@ class EnergyFocused: ICgraSchedulerModelProvider {
                 // contents of defaultSinglePrecisionFloatOperators()
                 +I2F() // Convert Integer to Float
                 +F2I() // Convert Float to Integer
-                +ADDSUB(Format.FLOAT) // Addition, Subtraction
-                +NEG(Format.FLOAT) // Negate - almost no float negations needed
-                +MUL(Format.FLOAT) // Multiply
+                +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
+                +NEG(ScarFormat.FLOAT) // Negate - almost no float negations needed
+                +MUL(ScarFormat.FLOAT) // Multiply
                 +DIVFLOAT() // Divide - only a few float divisions, none of them inside a loop
                 //+SQRTFLOAT() // SquareRoot
-                +CMP(Format.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
+                +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
                 // ------------ OR ----------------
 //                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
             }
 
             operatorsFor(evenColumnPEs) {
                 // contents of all32BitOperators()
-                +ADDSUB(Format.INT) // Addition, Subtraction
-                +NEG(Format.INT) // K2 Negate
-                +MUL(Format.INT) // Multiply
+                +ADDSUB(ScarFormat.INT) // Addition, Subtraction
+                +NEG(ScarFormat.INT) // K2 Negate
+                +MUL(ScarFormat.INT) // Multiply
                 +DIVREMInt() // Divide, Remainder
-                // +AND(Format.RAW32) // Binary And
-                // +OR(Format.RAW32) // Binary Or
-                // +XOR(Format.RAW32) // Binary XOr
-                // +NOT(Format.RAW32) // Binary Negate
-                // +CMP(Format.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-                // +CMP(Format.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-                // +UCMP(Format.UINT, true) //
-                // +UCMP(Format.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-                +SHL(Format.INT) // Shift left
-                +SHR(Format.INT) // Shift Right (arithmetic)
+                // +AND(ScarFormat.RAW32) // Binary And
+                // +OR(ScarFormat.RAW32) // Binary Or
+                // +XOR(ScarFormat.RAW32) // Binary XOr
+                // +NOT(ScarFormat.RAW32) // Binary Negate
+                // +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
+                // +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
+                // +UCMP(ScarFormat.UINT, true) //
+                // +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
+                +SHL(ScarFormat.INT) // Shift left
+                +SHR(ScarFormat.INT) // Shift Right (arithmetic)
                 // +I2B() // Convert Integer to Byte
                 // ------------ OR ----------------
 //                all32BitIntegerOperators() // could be used instead of typing up above operators manually
@@ -93,40 +94,40 @@ class EnergyFocused: ICgraSchedulerModelProvider {
                 // contents of defaultSinglePrecisionFloatOperators()
                 +I2F() // Convert Integer to Float
                 +F2I() // Convert Float to Integer
-                +ADDSUB(Format.FLOAT) // Addition, Subtraction
-                // +NEG(Format.FLOAT) // Negate - almost no float negations needed
-                +MUL(Format.FLOAT) // Multiply
+                +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
+                // +NEG(ScarFormat.FLOAT) // Negate - almost no float negations needed
+                +MUL(ScarFormat.FLOAT) // Multiply
                 // +DIVFLOAT() // Divide - only a few float divisions, none of them inside a loop
                 //+SQRTFLOAT() // SquareRoot
-                +CMP(Format.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
+                +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
                 // ------------ OR ----------------
 //                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
             }
 
             // operatorsFor(evenColumnPEs) {
             //     // contents of all32BitOperators()
-            //     +ADDSUB(Format.INT) // Addition, Subtraction
-            //     +NEG(Format.INT) // K2 Negate
-            //     +MUL(Format.INT) // Multiply
-            //     +AND(Format.RAW32) // Binary And
-            //     +OR(Format.RAW32) // Binary Or
-            //     +XOR(Format.RAW32) // Binary XOr
-            //     +NOT(Format.RAW32) // Binary Negate
-            //     +CMP(Format.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-            //     +CMP(Format.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-            //     +UCMP(Format.UINT, true) //
-            //     +UCMP(Format.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
+            //     +ADDSUB(ScarFormat.INT) // Addition, Subtraction
+            //     +NEG(ScarFormat.INT) // K2 Negate
+            //     +MUL(ScarFormat.INT) // Multiply
+            //     +AND(ScarFormat.RAW32) // Binary And
+            //     +OR(ScarFormat.RAW32) // Binary Or
+            //     +XOR(ScarFormat.RAW32) // Binary XOr
+            //     +NOT(ScarFormat.RAW32) // Binary Negate
+            //     +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
+            //     +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
+            //     +UCMP(ScarFormat.UINT, true) //
+            //     +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
             //     +I2B() // Convert Integer to Byte
 
 
-            //     +ADDSUB(Format.FLOAT) // Addition, Subtraction
-            //     +NEG(Format.FLOAT) // Negate
-            //     +MUL(Format.FLOAT) // Multiply
-            //     +CMP(Format.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)//
+            //     +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
+            //     +NEG(ScarFormat.FLOAT) // Negate
+            //     +MUL(ScarFormat.FLOAT) // Multiply
+            //     +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)//
             // }
 
             operatorsFor(grid[1,1], grid[0,2]) {
-                +Trigonometric.SINCOS(Format.FLOAT)
+                +Trigonometric.SINCOS(ScarFormat.FLOAT)
             }
 
             // Memory PEs
