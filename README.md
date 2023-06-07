@@ -169,6 +169,14 @@ Im Grunde können eigentlich alle Optionen genutzt werden, die geboten werden. L
 
 In der Datei `rs2runner/src/main/kotlin/rs/rs2/optConfig/cfgOptConfig.kt` sind alle für die Optimnierung relevanten Einstellungen zusammengefasst. Hier können einzelne C-Funktionen von der Beschleunigung ausgeschlossen werden, oder das *Unrolling*, das zu einem großen Teil für die Beschleunigung verantwortlich ist konfiguriert werden. Die vorhandenen Optionen sind in Javadoc dokumentiert (In IntelliJ standardmäßig mit `Ctrl+Q` erreichbar).
 
+### Logging
+
+Standardmäßig werden viele Debug-Informationen auf der Kommandozeile ausgegeben, denen man entnehmen kann, welche Kernel die Synthese versucht zu synthetisieren. Auch gibt es diverse Berichte über Problemstellen und Ineffizienzen der Kernel. `warn` ist dabei genau nur das, eine Warnung über potenziellen Leistungsverlust oder Ineffizienz. Die `LoopFactCollector` und `MemoryCheckCreator` warnen beispielsweise darüber, dass sie bestimmte Schleifen oder Speicherzugriffsmuster nicht verstehen. Dies führt nur dazu, dass die betroffenen Speicherzugriffe nicht parallel ausgeführt werden können, da unbekannt ist, ob sie sich gegenseitig beeinflussen würden. Im schlimmsten Fall werden aller Speicherzugriffe in der exakten Reihenfolge wie im Assembler-Code und auf dem Prozessor ausgeführt um die Korrektheit unter allen Umständen zu garantieren. 
+
+Kritische `error`s führen dazu, dass die Synthese von einem Kernel abgebrochen wird, um stattdessen andere zu probieren.
+
+Das Logging wird aus den `src/main/resources/logback.xml` und `src/test/resources/logback-test.xml` für die Tests kontrolliert. Hier kann für jede Klasse das das Loglevel reduziert werden um zB nur noch Warnungen oder Errors zu erhalten
+
 
 Abgabe
 -----------------------------
