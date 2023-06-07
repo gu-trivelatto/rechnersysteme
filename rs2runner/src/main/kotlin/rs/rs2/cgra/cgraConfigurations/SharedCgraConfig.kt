@@ -9,8 +9,6 @@ object SharedCgraConfig {
 
     fun ICgraModelConfigurator<*, *>.applyCommonConfig() {
 
-        useCBox {
-            isCombinatorialBSS = true
-        }
+
     }
 }

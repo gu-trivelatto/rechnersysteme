@@ -48,11 +48,7 @@ class Rs2SpeedupCommand: BaseRunnerCommand(), Runnable {
                 System.err.println("Warning: --correctnessOnly Mode. Operation and Memory Latencies artificially shortened. Tick Count not realistic!")
                 staticMemoryLatency(1)
             } else {
-                twoLevelCacheHierarchy {
-                    useDragonCoherency {
-                        forceCoherencyRequestEvenIfNoSiblings = true
-                    }
-                }
+                configureMemoryLatencyModel()
             }
             core {
                 directCoreFrontEnd()

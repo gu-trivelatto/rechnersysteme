@@ -4,9 +4,24 @@ import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
-import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
-import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.PeGrid
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatAddSub
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatComparisons
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatConversions
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatDivision
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatLogic
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatMultiply
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatSqrt
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatTrigonometryOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.ChunkLogicOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.ChunkMuxAndRouteOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerCoreOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerDivisionOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerMultiplyOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerShiftOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.memory.NativeMemoryOperations
 import model.resources.processing.operator.*
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import scar.ScarFormat
@@ -14,7 +29,7 @@ import scar.ScarFormat
 /**
  * Use this CGRA-Config for the energy efficient variant. Use of this "efficiency" config is already configured in all tests.
  *
- * You can copy from or compare with the Std CGRAs as you wish.
+ * You can copy from or compare with the Std CGRAs as you wish. Handed in results WILL use this class with the exact names for the energy-build
  */
 class EnergyFocused: ICgraSchedulerModelProvider {
     override val name: String
@@ -36,111 +51,73 @@ class EnergyFocused: ICgraSchedulerModelProvider {
                 x % 2 != 0
             }
 
+            // All standard operators for uneven colums (half the PEs)
             operatorsFor(unevenColumnPEs) {
                 // contents of all32BitOperators()
-                +ADDSUB(ScarFormat.INT) // Addition, Subtraction
-                +NEG(ScarFormat.INT) // K2 Negate
-                +MUL(ScarFormat.INT) // Multiply
-                +DIVREMInt() // Divide, Remainder
-                +AND(ScarFormat.RAW32) // Binary And
-                +OR(ScarFormat.RAW32) // Binary Or
-                +XOR(ScarFormat.RAW32) // Binary XOr
-                +NOT(ScarFormat.RAW32) // Binary Negate
-                +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-                +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-                +UCMP(ScarFormat.UINT, true) //
-                +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-                +SHL(ScarFormat.INT) // Shift left
-                +SHR(ScarFormat.INT) // Shift Right (arithmetic)
-                // +I2B() // Convert Integer to Byte
+                // Latencies (bufferedRegs, bufferedX) are not allowed to be changed!
+                +IntegerCoreOperations() // +, -, ==, !=, <, >=, u<, u>=
+                +ChunkMuxAndRouteOperations // Passthrough & Mux(a, b). Needed for architecture to work
+                +ChunkLogicOperations // 32bit And, Or, Xor
+                +IntegerShiftOperations // <<, >>, >>>
+                +IntegerMultiplyOperations() // multiply
+                +IntegerDivisionOperations // divide, remainder
                 // ------------ OR ----------------
 //                all32BitIntegerOperators() // could be used instead of typing up above operators manually
 
 
                 // contents of defaultSinglePrecisionFloatOperators()
-                +I2F() // Convert Integer to Float
-                +F2I() // Convert Float to Integer
-                +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
-                +NEG(ScarFormat.FLOAT) // Negate - almost no float negations needed
-                +MUL(ScarFormat.FLOAT) // Multiply
-                +DIVFLOAT() // Divide - only a few float divisions, none of them inside a loop
-                //+SQRTFLOAT() // SquareRoot
-                +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
+                +FloatConversions(withUnsigned = true) // int2float, float2int, float2uint, uint2float
+                +FloatAddSub // Add, Sub
+                +FloatLogic // Absolute, Negate
+                +FloatMultiply //  Multiply
+                +FloatDivision // divide
+                +FloatSqrt // square root
+                +FloatComparisons // ==, !=, <, <=
                 // ------------ OR ----------------
 //                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
             }
 
+            // only some operators for the other half
             operatorsFor(evenColumnPEs) {
                 // contents of all32BitOperators()
-                +ADDSUB(ScarFormat.INT) // Addition, Subtraction
-                +NEG(ScarFormat.INT) // K2 Negate
-                +MUL(ScarFormat.INT) // Multiply
-                +DIVREMInt() // Divide, Remainder
-                // +AND(ScarFormat.RAW32) // Binary And
-                // +OR(ScarFormat.RAW32) // Binary Or
-                // +XOR(ScarFormat.RAW32) // Binary XOr
-                // +NOT(ScarFormat.RAW32) // Binary Negate
-                // +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-                // +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-                // +UCMP(ScarFormat.UINT, true) //
-                // +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-                +SHL(ScarFormat.INT) // Shift left
-                +SHR(ScarFormat.INT) // Shift Right (arithmetic)
-                // +I2B() // Convert Integer to Byte
+                // Latencies (bufferedRegs, bufferedX) are not allowed to be changed!
+                +IntegerCoreOperations() // +, -, ==, !=, <, >=, u<, u>=
+                +ChunkMuxAndRouteOperations // Passthrough & Mux(a, b). Needed for architecture to work
+                +ChunkLogicOperations // 32bit And, Or, Xor
+//                +IntegerShiftOperations // <<, >>, >>>
+                +IntegerMultiplyOperations() // multiply
+//                +IntegerDivisionOperations // divide, remainder
                 // ------------ OR ----------------
 //                all32BitIntegerOperators() // could be used instead of typing up above operators manually
 
 
                 // contents of defaultSinglePrecisionFloatOperators()
-                +I2F() // Convert Integer to Float
-                +F2I() // Convert Float to Integer
-                +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
-                // +NEG(ScarFormat.FLOAT) // Negate - almost no float negations needed
-                +MUL(ScarFormat.FLOAT) // Multiply
-                // +DIVFLOAT() // Divide - only a few float divisions, none of them inside a loop
-                //+SQRTFLOAT() // SquareRoot
-                +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)
+//                +FloatConversions(withUnsigned = true) // int2float, float2int, float2uint, uint2float
+                +FloatAddSub // Add, Sub
+                +FloatLogic // Absolute, Negate
+                +FloatMultiply //  Multiply
+//                +FloatDivision // divide
+//                +FloatSqrt // square root
+                +FloatComparisons // ==, !=, <, <=
                 // ------------ OR ----------------
 //                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
             }
 
-            // operatorsFor(evenColumnPEs) {
-            //     // contents of all32BitOperators()
-            //     +ADDSUB(ScarFormat.INT) // Addition, Subtraction
-            //     +NEG(ScarFormat.INT) // K2 Negate
-            //     +MUL(ScarFormat.INT) // Multiply
-            //     +AND(ScarFormat.RAW32) // Binary And
-            //     +OR(ScarFormat.RAW32) // Binary Or
-            //     +XOR(ScarFormat.RAW32) // Binary XOr
-            //     +NOT(ScarFormat.RAW32) // Binary Negate
-            //     +CMP(ScarFormat.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-            //     +CMP(ScarFormat.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-            //     +UCMP(ScarFormat.UINT, true) //
-            //     +UCMP(ScarFormat.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-            //     +I2B() // Convert Integer to Byte
-
-
-            //     +ADDSUB(ScarFormat.FLOAT) // Addition, Subtraction
-            //     +NEG(ScarFormat.FLOAT) // Negate
-            //     +MUL(ScarFormat.FLOAT) // Multiply
-            //     +CMP(ScarFormat.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)//
-            // }
-
+            // only 2 single Sin/Cos unit on specific PEs
             operatorsFor(grid[1,1], grid[0,2]) {
-                +Trigonometric.SINCOS(ScarFormat.FLOAT)
+                +FloatTrigonometryOperations
             }
 
             // Memory PEs
             // operatorsFor(grid[2, 0], grid[1, 3]) {
             operatorsFor(grid[0, 1]) {
-                +RandomAccessMemory(false, true, 32, true) // load and store operations in signed, unsigned, 32, 16 and 8 bit
-                // ------------ OR ----------------
-//                memoryOperators() // could be used instead of typing up above operator manually
+                +NativeMemoryOperations(withBarriers = false, withIntegratedOffset = true)  // load and store operations in signed, unsigned, 32, 16 and 8 bit
+                // [withIntegratedOffset]: addition operation can internally do a pointer addition like (arrBase + 12). Without it, saves additional operand & registerPort, uses regular, external addition
+                // [withBarriers]: not needed for the memory-model that is used
             }
 
-            useCBox {
-                regFileSize = 64
-                evalBlockCount = 1
+            useCondPEs {
+                condPeCount = 1
             }
             setDefaultDataPeRegFileSize(256)
             allLcus {

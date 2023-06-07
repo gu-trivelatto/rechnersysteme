@@ -4,14 +4,12 @@ import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
 import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatTrigonometryOperations
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
-import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
-import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import model.resources.processing.operator.Trigonometric
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.PeGrid
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
-import scar.ScarFormat
 
 class Toroidal4x4MatrixStar2MemFloat : ICgraSchedulerModelProvider {
     override val name: String
@@ -39,7 +37,7 @@ class Toroidal4x4MatrixStar2MemFloat : ICgraSchedulerModelProvider {
                 all32BitIntegerOperators()
                 defaultSinglePrecisionFloatOperators()
 
-                +Trigonometric.SINCOS(ScarFormat.FLOAT)
+                +FloatTrigonometryOperations
             }
 
             // Memory PEs

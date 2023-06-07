@@ -1,9 +1,9 @@
 import org.jetbrains.kotlin.gradle.plugin.KotlinPluginWrapper
 
 plugins {
-    id("com.github.ben-manes.versions") version "0.45.0"
+    id("com.github.ben-manes.versions") version "0.46.0"
     kotlin("jvm") version "1.8.0" apply false
-    id("org.jetbrains.dokka") version "1.7.20" apply false
+    id("org.jetbrains.dokka") version "1.8.20" apply false
 }
 
 tasks {

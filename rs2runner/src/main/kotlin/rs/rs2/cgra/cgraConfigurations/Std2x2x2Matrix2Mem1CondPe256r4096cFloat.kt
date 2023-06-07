@@ -4,13 +4,12 @@ import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixInterconnect
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.scheduling.flow.PeCube
-import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import model.resources.processing.operator.Trigonometric
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatTrigonometryOperations
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
-import scar.ScarFormat
 
 class Std2x2x2Matrix2Mem1CondPe256r4096cFloat : ICgraSchedulerModelProvider {
     override val name: String
@@ -27,7 +26,7 @@ class Std2x2x2Matrix2Mem1CondPe256r4096cFloat : ICgraSchedulerModelProvider {
                 all32BitIntegerOperators()
                 defaultSinglePrecisionFloatOperators()
 
-                +Trigonometric.SINCOS(ScarFormat.FLOAT)
+                +FloatTrigonometryOperations
             }
 
             // Memory PEs
@@ -35,9 +34,8 @@ class Std2x2x2Matrix2Mem1CondPe256r4096cFloat : ICgraSchedulerModelProvider {
                 memoryOperators()
             }
 
-            useCBox {
-                regFileSize = 64
-                evalBlockCount = 1
+            useCondPEs {
+                condPeCount = 1
             }
             setDefaultDataPeRegFileSize(256)
             allLcus {
