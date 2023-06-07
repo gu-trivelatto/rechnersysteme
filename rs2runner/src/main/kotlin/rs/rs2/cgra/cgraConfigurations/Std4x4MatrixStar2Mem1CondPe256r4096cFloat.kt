@@ -11,25 +11,14 @@ import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
 
-class Toroidal4x4MatrixStar2MemFloat : ICgraSchedulerModelProvider {
+class Std4x4MatrixStar2Mem1CondPe256r4096cFloat : ICgraSchedulerModelProvider {
     override val name: String
-        get() = "4x4_toroidal_2memPorts_float"
+        get() = "4x4_MatrixStar_2memPorts_1condPe_256r_4096c_float"
 
     override fun invoke(): ICgraSchedulerModel {
         val grid = PeGrid(4, 4)
 
         grid.matrixStarInterconnect()
-
-        val rightBorder = grid.width-1
-        val bottomBorder = grid.height-1
-        grid.forEachCoordinate { pe, x, y, id ->
-            when {
-                x == 0 -> pe.addInterconnectInput(grid[rightBorder, y])
-                x == rightBorder -> pe.addInterconnectInput(grid[0, y])
-                y == 0 -> pe.addInterconnectInput(grid[x, bottomBorder])
-                y == bottomBorder -> pe.addInterconnectInput(grid[x, 0])
-            }
-        }
 
         return grid.cgraConfigurator(name) {
 

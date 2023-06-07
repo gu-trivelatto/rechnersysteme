@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
 import rs.rs2.cgra.app.autoAccelerate
+import rs.rs2.cgra.app.configureMemoryLatencyModel
 import rs.rs2.cgra.app.printCgraExecutionsIfPresent
 import rs.rs2.cgra.app.printCgraProfilesIfPresent
 import rs.rs2.cgra.app.printLoopProfilesIfPresent
@@ -56,11 +57,7 @@ class GpsAcquisitionTests {
             heapAllocator {
                 reserveMemory(RvKernelPatcher.PATCH_ALLOCATOR_ID, RvKernelPatcher.PATCH_REGION_DEFAULT_SIZE)
             }
-            twoLevelCacheHierarchy {
-                useDragonCoherency {
-                    forceCoherencyRequestEvenIfNoSiblings = true
-                }
-            }
+            configureMemoryLatencyModel()
             core {
                 directCoreFrontEnd()
                 pipelinedScalarDispatcher()
@@ -72,6 +69,9 @@ class GpsAcquisitionTests {
             }
             val cgraModel = cgraConfig.invoke()
             System.err.println("Using Cgra-Config: ${cgraModel.name}")
+            cgra {
+                postedWrites = false // disable to be safe and ensure correctness for all kernels
+            }
             cgraModel.verifyRs2Constraints()
             cgraAcceleration(cgraModel) {
                 synthOutputPath = outputDir

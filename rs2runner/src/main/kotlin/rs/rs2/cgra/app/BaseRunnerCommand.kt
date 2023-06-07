@@ -6,18 +6,16 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.ParameterException
 import com.beust.jcommander.ParametersDelegate
 import com.beust.jcommander.converters.PathConverter
-import de.tu_darmstadt.rs.cgra.api.components.loopProfiling.print
 import de.tu_darmstadt.rs.cgra.api.components.printKernelStats
 import de.tu_darmstadt.rs.riscv.impl.synthesis.energy.energyConsumptionTreeWithPeActivity
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.commonLoopProfiler
 import de.tu_darmstadt.rs.cgra.impl.components.loopProfiling.printLoopTable
-import de.tu_darmstadt.rs.cgra.impl.memory.ByteAddressedCgraCachePort
 import de.tu_darmstadt.rs.cgra.impl.memory.ZeroLatencyByteAddressedCgraMemoryPort
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.CgraModelLoader
+import de.tu_darmstadt.rs.cgra.hdlModel.serviceLoader.CgraModelLoader
+import de.tu_darmstadt.rs.cgra.schedulerModel.TS
+import de.tu_darmstadt.rs.cgra.schedulerModel.operator.IOperationSchedulerModel
 import de.tu_darmstadt.rs.cgra.simulator.impl.testing.loggingConfigs.configureStdCgraLogging
-import de.tu_darmstadt.rs.cgra.synthesis.kernel.WriteLocCompression
-import de.tu_darmstadt.rs.cgra.synthesis.testing.enableScarAssertions
 import de.tu_darmstadt.rs.disasm.executable.IExecutableBinary
 import de.tu_darmstadt.rs.disasm.executable.VariableInsnLengthElfLoader
 import de.tu_darmstadt.rs.jcommander.validators.DirectoryExistsValidator
@@ -30,7 +28,7 @@ import de.tu_darmstadt.rs.nativeSim.components.profiling.printLoops
 import de.tu_darmstadt.rs.nativeSim.components.sysCalls.BaseSyscallHandler
 import de.tu_darmstadt.rs.nativeSim.synthesis.accelerationManager.IAccelerationManagerBuilder
 import de.tu_darmstadt.rs.nativeSim.synthesis.patchingStrategy.builder.KernelSelection
-import de.tu_darmstadt.rs.riscv.RvArchInfo
+import de.tu_darmstadt.rs.riscv.BaseRvArchDescription
 import de.tu_darmstadt.rs.riscv.impl.synthesis.builder.cgraAcceleration
 import de.tu_darmstadt.rs.riscv.simulator.api.IRvSystem
 import de.tu_darmstadt.rs.riscv.simulator.impl.builder.RvSystemBuilder
@@ -41,7 +39,6 @@ import de.tu_darmstadt.rs.simulator.api.SimulatorFramework
 import de.tu_darmstadt.rs.simulator.api.clock.ITicker
 import de.tu_darmstadt.rs.simulator.api.energy.estimateEnergyUsage
 import de.tu_darmstadt.rs.simulator.components.memoryModel.caches.dataless.BaseSuspendingDatalessLatencyModel
-import de.tu_darmstadt.rs.simulator.components.memoryModel.caches.dataless.CoherentSuspendingLatencyModel
 import de.tu_darmstadt.rs.simulator.components.memoryModel.coherencyManagement.BaseCoherencyManager
 import de.tu_darmstadt.rs.util.kotlin.logging.slf4j
 import rs.rs2.cgra.cgraConfigurations.PerformanceFocused
@@ -49,6 +46,7 @@ import rs.rs2.cgra.optConfig.configureCgraSynthesis
 import rs.rs2.cgra.optConfig.configureKernelOptimization
 import rs.rs2.cgra.optConfig.configureStrategy
 import rs.rs2.cgra.optConfig.disableMemoryAliasingDetection
+import scar.Operation
 import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
@@ -109,6 +107,12 @@ abstract class BaseRunnerCommand {
 
     @Parameter(names = ["--correctnessOnly"], description = "Ignore memory and compute latencies to simulate faster. Clock cycles will be unrealistic")
     var fast: Boolean = false
+
+    @Parameter(names = ["--noCoherencyModel"], description = "Disable full coherency model for simulation. Avoids memory consistency issues, but reduced execution times, as memory access will be unnaturally fast")
+    var noCoherencyModel: Boolean = false
+
+    @Parameter(names = ["--postedWrites"], description = "Allow CGRA to continue execution without waiting for memory-writes to actually complete. Increases speed, but may cause memory consistency issues with current CGRA Synthesis. Recommended off, unless you can verify correct operation!")
+    var cgraPostedWrites: Boolean = false
 
     @Parameter(names = ["-h", "--help"], description = "Print this Help to Console")
     var help: Boolean = false
@@ -182,6 +186,9 @@ abstract class BaseRunnerCommand {
             val cgraName = options.cgra
             val provider = CgraModelLoader.loadSchedulerModelByName(cgraName) ?: throw ParameterException("cgraConfig $cgraName not found!")
             val model = provider()
+            cgra {
+                postedWrites = this@BaseRunnerCommand.cgraPostedWrites
+            }
             model.verifyRs2Constraints()
             if (accelerate) {
                 System.err.println("Using Cgra-Config: ${model.name}")
@@ -202,8 +209,8 @@ abstract class BaseRunnerCommand {
         }
     }
 
-    private fun IAccelerationManagerBuilder<RvArchInfo>.configureCgraAcceleration(
-        elf: IExecutableBinary<*, *>,
+    private fun IAccelerationManagerBuilder<BaseRvArchDescription>.configureCgraAcceleration(
+        elf: IExecutableBinary<*, *, *>,
         options: CgraAccelerationOptions,
         simCgraWithHook: Boolean,
         cfgSim: Boolean,
@@ -312,7 +319,7 @@ abstract class BaseRunnerCommand {
     }
 
     protected open fun configureAcceleration(
-        mgmt: IAccelerationManagerBuilder<RvArchInfo>,
+        mgmt: IAccelerationManagerBuilder<BaseRvArchDescription>,
         manuallySelectedKernels: Collection<NativeKernelDescriptor>,
         loopProfiler: ILoopProfiler?
     ) {
@@ -346,6 +353,8 @@ abstract class BaseRunnerCommand {
             }
         }
     }
+
+    protected fun RvSystemBuilder.configureMemoryLatencyModel() = configureMemoryLatencyModel(noCoherencyModel)
 
     protected fun RvSystemBuilder.configureEnvAndStdio(argsWithoutProg: List<String>) {
         env {
@@ -428,6 +437,18 @@ fun IRvSystem.printCgraProfilesIfPresent() {
     }
 }
 
+fun RvSystemBuilder.configureMemoryLatencyModel(noCoherencyModel: Boolean = false) {
+    if (!noCoherencyModel) {
+        twoLevelCacheHierarchy {
+            useDragonCoherency {
+                forceCoherencyRequestEvenIfNoSiblings = true
+            }
+        }
+    } else {
+        staticMemoryLatency(1)
+    }
+}
+
 fun IRvSystem.printLoopProfilesIfPresent() {
     core.dispatcher.profiler?.let { profiler ->
         System.err.println()
@@ -451,11 +472,43 @@ fun IRvSystem.printCgraExecutionsIfPresent() {
 }
 
 fun ICgraSchedulerModel.verifyRs2Constraints() {
-    check(bitWidth == 32)
+    check(liveInOutDataWidth == 32)
+    check(constantTableDataWidth == 32)
+    check(dataInterconnectWidth <= 34)
+
     check(this.dataPes.count { it.hasMemoryAccess } <= 4) { "Cannot use more than 4 Memory Ports" }
 
     val contextCount = this.getLcuForComponent(0).contextCount ?: error("CtxCount missing!")
     if (contextCount > 8192) {
         System.err.println("WARNING: Excessive Context Count of $contextCount: Please check whether the total amount of required memory is still reasonable and justify this in your report!")
     }
+
+    verifyOperationNotQuickerThan(Operation.MUL_int, 1)
+    verifyOperationNotQuickerThan(Operation.ADD_flopoco, 3)
+    verifyOperationNotQuickerThan(Operation.SUB_flopoco, 3)
+    verifyOperationNotQuickerThan(Operation.MUL_flopoco, 2)
+    verifyOperationNotQuickerThan(Operation.DIV_flopoco, 6)
+    verifyOperationNotQuickerThan(Operation.IF_EQ_flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.IF_NE_flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.IF_LT_flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.IF_LE_flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.Flopoco2I, 1)
+    verifyOperationNotQuickerThan(Operation.Flopoco2UI, 1)
+    verifyOperationNotQuickerThan(Operation.I2Flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.UI2Flopoco, 1)
+    verifyOperationNotQuickerThan(Operation.SQRT_flopoco, 6)
+}
+
+private fun ICgraSchedulerModel.verifyOperationNotQuickerThan(operation: Operation, shortestTs: TS) {
+    val illegal = this.getOperationModels(operation).filter { it.getActionPlan().timeSteps <= shortestTs }.toList()
+
+    check(illegal.isEmpty()) {
+        "Illegal operation: $operation was configured to be faster than $shortestTs timeSteps, which is below the default-value: ${illegal.joinToString() { describeOp(it) }}"
+    }
+}
+
+private fun ICgraSchedulerModel.describeOp(op: IOperationSchedulerModel): String {
+    val peID = op.peID
+    val pipe = dataPes[peID].pipelines?.find { it.opcodes.any { it.scarOperation == op.scarOperation } }
+    return "${pipe?.builder?.simpleName ?: "[unknown pipeline]"} on PE$peID"
 }

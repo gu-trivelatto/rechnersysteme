@@ -1,35 +1,24 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.PeGrid
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
 import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
 import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatTrigonometryOperations
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
-import de.tu_darmstadt.rs.cgra.schedulerModel.builder.PeGrid
-import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
 import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
 import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
 import rs.rs2.cgra.operatorCollections.memoryOperators
 
-class Toroidal4x4MatrixStar2MemFloat : ICgraSchedulerModelProvider {
+class Std2x2MatrixStar2Mem1CondPe256r4096cFloat : ICgraSchedulerModelProvider {
     override val name: String
-        get() = "4x4_toroidal_2memPorts_float"
+        get() = "2x2_MatrixStar_2memPorts_1condPe_256r_4096c_float"
 
     override fun invoke(): ICgraSchedulerModel {
-        val grid = PeGrid(4, 4)
+        val grid = PeGrid(2, 2)
 
         grid.matrixStarInterconnect()
-
-        val rightBorder = grid.width-1
-        val bottomBorder = grid.height-1
-        grid.forEachCoordinate { pe, x, y, id ->
-            when {
-                x == 0 -> pe.addInterconnectInput(grid[rightBorder, y])
-                x == rightBorder -> pe.addInterconnectInput(grid[0, y])
-                y == 0 -> pe.addInterconnectInput(grid[x, bottomBorder])
-                y == bottomBorder -> pe.addInterconnectInput(grid[x, 0])
-            }
-        }
 
         return grid.cgraConfigurator(name) {
 
@@ -41,7 +30,7 @@ class Toroidal4x4MatrixStar2MemFloat : ICgraSchedulerModelProvider {
             }
 
             // Memory PEs
-            operatorsFor(grid[2, 0], grid[1, 3]) {
+            operatorsFor(grid[0, 0], grid[1, 1]) {
                 memoryOperators()
             }
 

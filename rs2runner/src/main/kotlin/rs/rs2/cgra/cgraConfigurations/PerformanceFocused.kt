@@ -1,31 +1,49 @@
 package rs.rs2.cgra.cgraConfigurations
 
 import de.tu_darmstadt.rs.cgra.schedulerModel.ICgraSchedulerModel
-import de.tu_darmstadt.rs.cgra.hdlModel.api.ICgraHdlGenerationModel
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider
 import de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.INativeWrapperModel
-import de.tu_darmstadt.rs.cgra.scheduling.flow.PeGrid
-import de.tu_darmstadt.rs.cgra.scheduling.flow.cgraConfigurator
-import de.tu_darmstadt.rs.cgra.scheduling.flow.fullInterconnect
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixInterconnect
-import de.tu_darmstadt.rs.cgra.scheduling.flow.matrixStarInterconnect
-import model.resources.processing.operator.*
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.PeGrid
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.cgraConfigurator
+import de.tu_darmstadt.rs.cgra.schedulerModel.builder.matrixStarInterconnect
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoAddSub
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoComparisons
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoDivision
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoF2I
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoF2IEEE
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoI2F
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoIEEE2F
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoLogic
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoMultiply
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoSqrt
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.flopoco.FlopocoTrigonometryOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatAddSub
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatComparisons
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatConversions
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatDivision
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatLogic
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatMultiply
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatSqrt
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.fp.FloatTrigonometryOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.ChunkLogicOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.ChunkMuxAndRouteOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerCoreOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerDivisionOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerMultiplyOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.gp.IntegerShiftOperations
+import de.tu_darmstadt.rs.cgra.schedulerModel.pureImpl.dataPe.memory.NativeMemoryOperations
 import rs.rs2.cgra.cgraConfigurations.SharedCgraConfig.applyCommonConfig
-import rs.rs2.cgra.operatorCollections.all32BitIntegerOperators
-import rs.rs2.cgra.operatorCollections.defaultSinglePrecisionFloatOperators
-import rs.rs2.cgra.operatorCollections.memoryOperators
-import scar.Format
 
 /**
  * Use this CGRA-Config for the performance focussed variant. Use of this "performance" config is already configured in all tests.
  *
- * You can copy from or compare with the Std CGRAs as you wish.
+ * You can copy from or compare with the Std CGRAs as you wish. Handed in results WILL use this class with the exact names for the performance-build
  */
 class PerformanceFocused: ICgraSchedulerModelProvider {
     override val name: String
         get() = "performance"
 
-    override fun invoke(): ICgraHdlGenerationModel {
+    override fun invoke(): ICgraSchedulerModel {
         val grid = PeGrid(4, 4)
         // PeCube(3, 3, 3)
 
@@ -38,55 +56,51 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
 
             operatorsForAllDataPes {
                 // contents of all32BitOperators()
-                +ADDSUB(Format.INT) // Addition, Subtraction
-                +NEG(Format.INT) // K2 Negate
-                +MUL(Format.INT) // Multiply
-                +DIVREMInt() // Divide, Remainder
-                +AND(Format.RAW32) // Binary And
-                +OR(Format.RAW32) // Binary Or
-                +XOR(Format.RAW32) // Binary XOr
-                +NOT(Format.RAW32) // Binary Negate
-                +CMP(Format.INT, true) // Main Signed Integer comparisons (>,>=,<,<=,==, !=)
-                +CMP(Format.INT, false) // More comparisons with 32bit result. Maybe needed for complicated conditions
-                +UCMP(Format.UINT, true) //
-                +UCMP(Format.UINT, false) // Main Unsigned Integer comparisons (>,>=,<,<=,==, !=)
-                +SHL(Format.INT) // Shift left
-                +SHR(Format.INT) // Shift Right (arithmetic)
-                +I2B() // Convert Integer to Byte
+                // Latencies (bufferedRegs, bufferedX) are not allowed to be changed!
+                +IntegerCoreOperations() // +, -, ==, !=, <, >=, u<, u>=
+                +ChunkMuxAndRouteOperations // Passthrough & Mux(a, b). Needed for architecture to work
+                +ChunkLogicOperations // 32bit And, Or, Xor
+                +IntegerShiftOperations // <<, >>, >>>
+                +IntegerMultiplyOperations() // multiply
+                +IntegerDivisionOperations // divide, remainder
                 // ------------ OR ----------------
 //                all32BitIntegerOperators() // could be used instead of typing up above operators manually
 
 
                 // contents of defaultSinglePrecisionFloatOperators()
-                +I2F() // Convert Integer to Float
-                +F2I() // Convert Float to Integer
-                +ADDSUB(Format.FLOAT) // Addition, Subtraction
-                +NEG(Format.FLOAT) // Negate
-                +MUL(Format.FLOAT) // Multiply
-                +DIVFLOAT() // Divide
-                +SQRTFLOAT() // SquareRoot
-                +CMP(Format.FLOAT, false) // Main Float comparisons (>,>=,<,<=,==,!=)//
+                +FloatConversions(withUnsigned = true) // int2float, float2int, float2uint, uint2float
+                +FloatAddSub // Add, Sub
+                +FloatLogic // Absolute, Negate
+                +FloatMultiply //  Multiply
+                +FloatDivision // divide
+                +FloatSqrt // square root
+                +FloatComparisons // ==, !=, <, <=
                 // ------------ OR ----------------
 //                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
 
                 // SINCOS is not included in defaultSinglePrecisionFloatOperators()
-                +Trigonometric.SINCOS(Format.FLOAT)
+                +FloatTrigonometryOperations
             }
 
             // Memory PEs
-            operatorsFor(grid[2, 0], grid[1, 3], grid[0, 1], grid [3, 2]) {
-                +RandomAccessMemory(false, true, 32, true) // load and store operations in signed, unsigned, 32, 16 and 8 bit
+            operatorsFor(grid[2, 0], grid[1, 3]) {
+                +NativeMemoryOperations(withBarriers = false, withIntegratedOffset = false)  // load and store operations in signed, unsigned, 32, 16 and 8 bit
+                // [withIntegratedOffset]: addition operation can internally do a pointer addition like (arrBase + 12). Without it, saves additional operand & registerPort, uses regular, external addition
+                // [withBarriers]: not needed for the memory-model that is used
                 // ------------ OR ----------------
 //                memoryOperators() // could be used instead of typing up above operator manually
             }
 
-            useCBox {
-                regFileSize = 64
-                evalBlockCount = 2
+            useCondPEs { // universal, can handle any kind of code structure
+                condPeCount = 2
             }
+//            useCBox { // old alternative to CondPEs. Can technically do more per cycle, but often less well utilized and cannot handle every kind of code structure
+//                regFileSize = 64
+//                evalBlockCount = 2
+//            }
             setDefaultDataPeRegFileSize(256)
             allLcus {
-                memorySize = 4096
+                memorySize = 18192
             }
 
             applyCommonConfig()

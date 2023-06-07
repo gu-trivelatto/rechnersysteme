@@ -26,13 +26,11 @@ Hier müssen alle Funktionen implementiert werden. Das Struct kann erweitert wer
 
 Zum Bauen sollte folgende Befehle im gpsAcquisition-Ordner durchgeführt werden:
 ```
-mkdir build
-cd build
-cmake ..
-make
+cmake -B build
+cmake --build build
 ```
 Das Programm wird dann in die `acquisition.rv32imfc.O3.elf` compiliert.
-Für die meisten darauf folgenden Änderungen am Projekt genügt es nochmals `make` im build-Ordner auszuführen. Sollte dies aus irgendeinem Grund fehlschlagen, kann das Projekt durch Löschen des build-Ordners und Ausführen der oben genannten Befehle vollständig neu gebaut werden.
+Für die meisten darauf folgenden Änderungen am Projekt genügt es `cmake --build build` auszuführen, oder innerhalb des erstellten build-Ordners `make`. Sollte dies aus irgendeinem Grund fehlschlagen, kann das Projekt durch Löschen des build-Ordners und Ausführen der oben genannten Befehle vollständig neu gebaut werden.
 
 ### Testen des Programms mit Qemu
 
@@ -136,13 +134,13 @@ rs2runner simulate [pfad/zu/acquisition.elf]
 ```
 möglich.
 
-Eine Simulation mit CGRA geht auch. Hierfür müssen allerdings die mit CGRA zu beschleunigenden Kernel manuell angegeben werden, da bei einer einzelnen Ausführung keine Messungen für die automatische Beschleunigung existieren. 'speedup' gibt alle Kernel an, die genutzt werden, die Namen sind auch für 'simulate' gültig. Es handelt sich hierbei typischerweise um die die Funktionsnamen aus dem C-Code. Aber Byte-Adressen aus dem Code werden auch akzeptiert. Eine einzelne Adresse muss dabei einem Funktionseinstiegspunkt entsprechen, Bereiche der Form `name:0x1200-0x1400` Beschreiben explizit Code-Abschnitte, die flexibler sind, aber schlechter unterstützt werden, als ganze C-Funktionen.
+Eine Simulation mit CGRA geht auch. Hierfür müssen allerdings die mit CGRA zu beschleunigenden Kernel manuell angegeben werden, da bei einer einzelnen Ausführung keine Messungen für die automatische Beschleunigung existieren. 'speedup' gibt alle Kernel an, die genutzt werden, die Namen sind auch für 'simulate' gültig. Es handelt sich hierbei typischerweise um die Funktionsnamen aus dem C-Code. Aber Byte-Adressen aus dem Code werden auch akzeptiert. Eine einzelne Adresse muss dabei einem Funktionseinstiegspunkt entsprechen, Bereiche der Form `name:0x1200-0x1400` Beschreiben explizit Code-Abschnitte, die flexibler sind, aber schlechter unterstützt werden, als ganze C-Funktionen.
 ```
 rs2runner simulate --cgra performance --kernel startAcquisition --aot [pfad/zu/acquisition.elf].
 ```
 Es können beliebig viele Kernel jeweils mit `--kernel [kernelName]` genannt werden. `--aot` weist den Simulator an diese Kernel auch sofort zu nutzen, ohne zuvor Analysedaten zur Rechenzeit erhalten zu haben.
 
-Für Programme die im Praktikum erwartet werden, sollte `rs2runner simulate` ähnlich wie Qemu funktionieren. Das Debuggen mit GDB wird beispielsweise genauso wie mit Qemu mit der Option `-g [portNummer]` unterstützt. Weitere Optionen wie Beispielsweise der detaillierte `--energy-report` können der eingebauten Hilfe des runners entnommen werden.
+Für Programme die im Praktikum erwartet werden, sollte `rs2runner simulate` ähnlich wie Qemu funktionieren, nur langsamer. Das Debuggen mit GDB wird beispielsweise genauso wie mit Qemu mit der Option `-g [portNummer]` unterstützt. Weitere Optionen wie Beispielsweise der detaillierte `--energy-report` können der eingebauten Hilfe des runners entnommen werden.
 
 ### Tests ausführen
 In `rs2runner/src/test/kotlin/rs/rs2/cgra/GpsAcquisitionTests.kt` befinden sich tests die eine Speedup-Simulation ähnlich wie auf der Kommandozeile ausführen. Hier ist der das auszuführende Programm mit `gpsAcquisition/build/acquisition.rv32imfc.O3.elf` fest eingestellt und auch die CGRA-Konfigurationen sind fest auf `EnergyFocused` und `PerformanceFocused` eingestellt, wie  auch in der Abgabe verlangt. Diese Tests sollten also für eine gültige Abgabe ohne Änderungen an der Testklasse erfolgreich durchlaufen.
@@ -150,7 +148,7 @@ In `rs2runner/src/test/kotlin/rs/rs2/cgra/GpsAcquisitionTests.kt` befinden sich 
 
 ### CGRA-Konfigurationen
 
-Im Ordner `rs2runner/src/main/kotlin/rs/rs2/cgraConfigurations` befinden sich die verschiedenen CGRA-Konfigurationen. *EnergyFocused* und *PerformanceFocused* sind für sie zum Ändern vorgesehen und enthalten jeweils Kommentare, die erklären welche Optionen es gibt. Die weiteren Konfigurationen enthalten andere Standardvorlagen oder zeigen Beispielhaft, wie man spezifische Effekte wie irreguläre Interconnects nutzen kann. 
+Im Ordner `rs2runner/src/main/kotlin/rs/rs2/cgraConfigurations` befinden sich die verschiedenen CGRA-Konfigurationen. *EnergyFocused* und *PerformanceFocused* sind für sie zum Ändern vorgesehen und enthalten jeweils Kommentare, die erklären welche Optionen es gibt. Die weiteren Konfigurationen enthalten andere Standardvorlagen oder zeigen beispielhaft, wie man spezifische Effekte wie irreguläre Interconnects nutzen kann. 
 
 Jeder CGRA-Konfiguration enthält einen eindeutigen Namen in `name`, der dem Namen auf der Kommandozeile entspricht. Sollten sie neue Konfigurationen hinzufügen, anstatt existierende zu ändern, müssen diese in `rs2runner/src/main/resources/META-INF/services/de.tu_darmstadt.rs.cgra.schedulerModel.serviceLoader.ICgraSchedulerModelProvider` hinzugefügt werden. Nur hier erwähnte Konfigurationen werden auf der Kommandozeile erkannt.
 
@@ -170,6 +168,14 @@ Im Grunde können eigentlich alle Optionen genutzt werden, die geboten werden. L
 ### Optimierungskonfigurationen
 
 In der Datei `rs2runner/src/main/kotlin/rs/rs2/optConfig/cfgOptConfig.kt` sind alle für die Optimnierung relevanten Einstellungen zusammengefasst. Hier können einzelne C-Funktionen von der Beschleunigung ausgeschlossen werden, oder das *Unrolling*, das zu einem großen Teil für die Beschleunigung verantwortlich ist konfiguriert werden. Die vorhandenen Optionen sind in Javadoc dokumentiert (In IntelliJ standardmäßig mit `Ctrl+Q` erreichbar).
+
+### Logging
+
+Standardmäßig werden viele Debug-Informationen auf der Kommandozeile ausgegeben, denen man entnehmen kann, welche Kernel die Synthese versucht zu synthetisieren. Auch gibt es diverse Berichte über Problemstellen und Ineffizienzen der Kernel. `warn` ist dabei genau nur das, eine Warnung über potenziellen Leistungsverlust oder Ineffizienz. Die `LoopFactCollector` und `MemoryCheckCreator` warnen beispielsweise darüber, dass sie bestimmte Schleifen oder Speicherzugriffsmuster nicht verstehen. Dies führt nur dazu, dass die betroffenen Speicherzugriffe nicht parallel ausgeführt werden können, da unbekannt ist, ob sie sich gegenseitig beeinflussen würden. Im schlimmsten Fall werden aller Speicherzugriffe in der exakten Reihenfolge wie im Assembler-Code und auf dem Prozessor ausgeführt um die Korrektheit unter allen Umständen zu garantieren. 
+
+Kritische `error`s führen dazu, dass die Synthese von einem Kernel abgebrochen wird, um stattdessen andere zu probieren.
+
+Das Logging wird aus den `src/main/resources/logback.xml` und `src/test/resources/logback-test.xml` für die Tests kontrolliert. Hier kann für jede Klasse das das Loglevel reduziert werden um zB nur noch Warnungen oder Errors zu erhalten
 
 
 Abgabe

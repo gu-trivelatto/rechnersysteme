@@ -41,11 +41,7 @@ class Rs2SimulateCommand : BaseRunnerCommand(), Runnable {
                     configureAllOperationsZeroCycle()
                 }
             } else {
-                twoLevelCacheHierarchy {
-                    useDragonCoherency {
-                        forceCoherencyRequestEvenIfNoSiblings = true
-                    }
-                }
+                configureMemoryLatencyModel()
                 core {
                     directCoreFrontEnd()
                     pipelinedScalarDispatcher()
