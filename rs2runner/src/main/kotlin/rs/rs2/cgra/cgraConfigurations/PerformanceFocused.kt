@@ -100,7 +100,7 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
 //            }
             setDefaultDataPeRegFileSize(256)
             allLcus {
-                memorySize = 18192
+                memorySize = 4096
             }
 
             applyCommonConfig()
