@@ -154,10 +154,15 @@ int computeMaxValue(acquisitionInternal_t* acq, float* rMatrixReal, float* rMatr
     return sMax;
 }
 
-void estimateSignalPower(acquisitionInternal_t* acq) {
+void estimatePIn(acquisitionInternal_t* acq) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
+    float pIn = 0.0;
 
-    
+    for (int i = 0; i < a->sampleCount; i++) {
+        pIn += a->samplesReal[i] * a->samplesReal[i] + a->samplesImag[i] * a->samplesImag[i];
+    }
+
+    return (pIn / a->sampleCount);
 }
 
 __attribute__((noipa))
@@ -171,6 +176,7 @@ bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* 
     int rMatrixImag[a->testFreqCount][a->sampleCount];
 
     float sMax = 0.0;
+    float pIn = 0.0;
 
     computeX(a, xMatrixReal, xMatrixImag);
 
@@ -195,9 +201,11 @@ bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* 
         }
     }
 
-    computeMaxValue(a, rMatrixReal, rMatrixImag, sMax)
+    sMax = computeMaxValue(a, rMatrixReal, rMatrixImag, sMax);
 
-	bool result;
+    pIn = estimatePIn(a);
+
+    bool result = ((sMax / pIn) > a->gamma);
 
 	return result; // return whether acquisition was achieved or not!
 }
