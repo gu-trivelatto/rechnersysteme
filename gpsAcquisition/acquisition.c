@@ -5,12 +5,20 @@
 #include <string.h>
 #include <math.h>
 
+#define F_S 2000000 // sample frequency of 2MHz
+
 typedef struct {
     int32_t codePhase;
     int32_t dopplerFrequency;
+
     int32_t sampleCount;
-    float* samples;
-    const float* inputCodes;
+    float* samplesReal;
+    float* samplesImag;
+
+    int32_t codesCount;
+    float* inputCodesReal;
+    float* inputCodesImag;
+
     int32_t testFreqCount;
     const int32_t* const testFrequencies;
     float maxMagnitude;
@@ -25,12 +33,18 @@ acquisition_t* allocateAcquisition(int32_t nrOfSamples) {
 
     a->codePhase = malloc(sizeof(int32_t));
     a->dopplerFrequency = malloc(sizeof(int32_t));
-    a->sampleCount = malloc(sizeof(int32_t));
-    a->samples = malloc(nrOfSamples * 2 * sizeof(float));
-    a->codeCount = malloc(sizeof(int32_t));
-    a->inputCodes = malloc(nrOfSamples * 2 * sizeof(float));
+
+    a->sampleCount = 0;
+    a->samplesReal = malloc(nrOfSamples * sizeof(float));
+    a->samplesImag = malloc(nrOfSamples * sizeof(float));
+    
+    a->codeCount = 0;
+    a->inputCodesReal = malloc(nrOfSamples * sizeof(float));
+    a->inputCodesImag = malloc(nrOfSamples * sizeof(float));
+
     a->testFreqCount = malloc(sizeof(int32_t));
     a->testFrequencies = malloc(4 * sizeof(int32_t));
+
     a->maxMagnitude = malloc(sizeof(float));
     a->inputPower = malloc(sizeof(float));
     a->gamma = malloc(sizeof(float));
@@ -42,15 +56,20 @@ void deleteAcquisition(acquisition_t* acq) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
     // free also everything else that was allocated in [allocateAcquisition]
-    free(a->samples);
     free(a->codePhase);
     free(a->dopplerFrequency);
+
     free(a->sampleCount);
-    free(a->samples);
+    free(a->samplesReal);
+    free(a->samplesImag);
+
     free(a->codeCount);
-    free(a->inputCodes);
+    free(a->inputCodesReal);
+    free(a->inputCodesImag);
+
     free(a->testFreqCount);
     free(a->testFrequencies);
+
     free(a->maxMagnitude);
     free(a->inputPower);
     free(a->gamma);
@@ -63,9 +82,9 @@ void enterSample(acquisition_t* acq, float real, float imag) {
 
     // put a sample-entry into the state in [a]
 
-    a->samples[a->sampleCount] = real;
-    a->samples[a->sampleCount+1] = imag;
-    a->sampleCount += 2;
+    a->samplesReal[a->sampleCount] = real;
+    a->samplesImag[a->sampleCount] = imag;
+    a->sampleCount += 1;
 }
 
 void enterCode(acquisition_t* acq, float real, float imag) {
@@ -73,18 +92,44 @@ void enterCode(acquisition_t* acq, float real, float imag) {
 
     // put a code-entry into the state in [a]
 
-    a->inputCodes[a->codeCount] = real;
-    a->inputCodes[a->codeCount+1] = imag;
-    a->codeCount += 2;
+    a->inputCodesReal[a->codeCount] = real;
+    a->inputCodesImag[a->codeCount] = imag;
+    a->codeCount += 1;
 }
+
+void computeX(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag) {
+    float angle = 0.0;
+    float cos = 0.0;
+    float sin = 0.0;
+
+    for (int32_t n = 0; n <= acq->testFreqCount; n++) {
+        for (int32_t f = 0; f <= acq->sampleCount; f++) {
+            angle = 2 * M_PI * acq->testFrequencies[f] * n / F_S;
+            cos = cosf(angle);
+            sin = sinf(angle);
+
+            xMatrixReal[n][f] = acq->samplesReal[f] * cos + acq->samplesImag[f] * sin;
+            xMatrixImag[n][f] = -acq->samplesReal[f] * sin + acq->samplesImag[f] * cos;
+        }
+    }
+}
+
+float computeSampleMatrix(aquisition_t* acq, float sampleMatrix) {}
+
+void computeFourier() {}
+
+void computMaxValue() {}
+
+void estimateSignalPower() {}
 
 __attribute__((noipa))
 bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* testFrequencies) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
-	//
-	// do actual calculation
-	//
+	int xMatrixReal[acq->testFreqCount][acq->sampleCount];
+    int xMatrixImag[acq->testFreqCount][acq->sampleCount];
+
+    computeX(acq, xMatrixReal, xMatrixImag);
 
 	bool result;
 
