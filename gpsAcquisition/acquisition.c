@@ -114,8 +114,6 @@ void computeX(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag) {
     }
 }
 
-float computeSampleMatrix(aquisition_t* acq, float sampleMatrix) {}
-
 void computeFourier() {}
 
 void computMaxValue() {}
