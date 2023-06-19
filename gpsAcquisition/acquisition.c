@@ -114,9 +114,30 @@ void computeX(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag) {
     }
 }
 
+void computeR(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag, float *rMatrixReal, float *rMatrixImag) {
+
+    for (int32_t n = 0; n <= acq->codesCount; n++) {
+        rMatrixReal[n] = xMatrixReal[n] * acq->inputCodesReal[n] - xMatrixImag[n] * acq->inputCodesImag[n];
+        rMatrixImag[n] = xMatrixReal[n] * acq->inputCodesImag[n] + xMatrixImag[n] * acq->inputCodesReal[n];
+    }
+}
+
 void computeFourier() {}
 
-void computMaxValue() {}
+void computeMaxValue(acquisitionInternal_t* acq, float* rMatrixReal, float* rMatrixImag, float sMax) {
+    float absValue = 0.0;
+
+	for(int32_t n = 0; n < acq->sampleCount; n++) {
+        absValue = rMatrixReal[n] * rMatrixReal[n] + rMatrixImag[n] * rMatrixImag[n];
+        if(absValue > sMax) {
+            sMax = absValue;
+            a->codePhase = acq->sampleCount - n;
+            a->dopplerFrequency = acq->testFrequencies[n];
+        }
+    }
+
+    return sMax;
+}
 
 void estimateSignalPower() {}
 
