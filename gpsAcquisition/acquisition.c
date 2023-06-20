@@ -31,8 +31,8 @@ acquisition_t* allocateAcquisition(int32_t nrOfSamples) {
 
     memset(a, 0, sizeof(acquisitionInternal_t)); // to initialize everything into a definitive state (=0)
 
-    a->codePhase = malloc(sizeof(int32_t));
-    a->dopplerFrequency = malloc(sizeof(int32_t));
+    a->codePhase = 0;
+    a->dopplerFrequency = 0;
 
     a->sampleCount = 0;
     a->samplesReal = malloc(nrOfSamples * sizeof(float));
@@ -42,7 +42,7 @@ acquisition_t* allocateAcquisition(int32_t nrOfSamples) {
     a->inputCodesReal = malloc(nrOfSamples * sizeof(float));
     a->inputCodesImag = malloc(nrOfSamples * sizeof(float));
 
-    a->testFreqCount = malloc(sizeof(int32_t));
+    a->testFreqCount = 0;
     a->testFrequencies = malloc(4 * sizeof(int32_t));
 
     //a->gamma = malloc(sizeof(float));
@@ -54,18 +54,12 @@ void deleteAcquisition(acquisition_t* acq) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
     // free also everything else that was allocated in [allocateAcquisition]
-    free(a->codePhase);
-    free(a->dopplerFrequency);
-
-    free(a->sampleCount);
     free(a->samplesReal);
     free(a->samplesImag);
 
-    free(a->codesCount);
     free(a->inputCodesReal);
     free(a->inputCodesImag);
 
-    free(a->testFreqCount);
     free(a->testFrequencies);
 
     //free(a->gamma);
@@ -123,7 +117,7 @@ void computeR(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag
 void computeFourier(acquisitionInternal_t* acq, float *real, float *imag) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
-    
+
 }
 
 void computeInvFourier(acquisitionInternal_t* acq, float *real, float *imag) {
