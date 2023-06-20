@@ -1,5 +1,6 @@
 
 #include "acquisition.h"
+#include <stdio.h>   // apagar depois
 
 #include <malloc.h>
 #include <string.h>
@@ -20,10 +21,9 @@ typedef struct {
     float* inputCodesImag;
 
     int32_t testFreqCount;
-    const int32_t* const testFrequencies;
-    float maxMagnitude;
-    float inputPower;
-    float gamma;
+    int32_t* testFrequencies;
+
+    //float gamma;
 } acquisitionInternal_t;
 
 acquisition_t* allocateAcquisition(int32_t nrOfSamples) {
@@ -38,16 +38,14 @@ acquisition_t* allocateAcquisition(int32_t nrOfSamples) {
     a->samplesReal = malloc(nrOfSamples * sizeof(float));
     a->samplesImag = malloc(nrOfSamples * sizeof(float));
     
-    a->codeCount = 0;
+    a->codesCount = 0;
     a->inputCodesReal = malloc(nrOfSamples * sizeof(float));
     a->inputCodesImag = malloc(nrOfSamples * sizeof(float));
 
     a->testFreqCount = malloc(sizeof(int32_t));
     a->testFrequencies = malloc(4 * sizeof(int32_t));
 
-    a->maxMagnitude = malloc(sizeof(float));
-    a->inputPower = malloc(sizeof(float));
-    a->gamma = malloc(sizeof(float));
+    //a->gamma = malloc(sizeof(float));
 
     return (acquisition_t*)a;
 }
@@ -63,16 +61,15 @@ void deleteAcquisition(acquisition_t* acq) {
     free(a->samplesReal);
     free(a->samplesImag);
 
-    free(a->codeCount);
+    free(a->codesCount);
     free(a->inputCodesReal);
     free(a->inputCodesImag);
 
     free(a->testFreqCount);
     free(a->testFrequencies);
 
-    free(a->maxMagnitude);
-    free(a->inputPower);
-    free(a->gamma);
+    //free(a->gamma);
+
     // after freeing all contained structures on heap, free acq itself
     free(acq);
 }
@@ -92,61 +89,59 @@ void enterCode(acquisition_t* acq, float real, float imag) {
 
     // put a code-entry into the state in [a]
 
-    a->inputCodesReal[a->codeCount] = real;
-    a->inputCodesImag[a->codeCount] = imag;
-    a->codeCount += 1;
+    a->inputCodesReal[a->codesCount] = real;
+    a->inputCodesImag[a->codesCount] = imag;
+    a->codesCount += 1;
 }
 
-void computeX(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag) {
-    acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
-
+void computeX(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag) {
     float angle = 0.0;
     float cos = 0.0;
     float sin = 0.0;
 
-    for (int32_t n = 0; n < a->testFreqCount; n++) {
-        for (int32_t f = 0; f < a->sampleCount; f++) {
+    for (int32_t f = 0; f < a->testFreqCount; f++) {
+        for (int32_t n = 0; n < a->sampleCount; n++) {
             angle = 2 * M_PI * a->testFrequencies[f] * n / F_S;
             cos = cosf(angle);
             sin = sinf(angle);
 
-            xMatrixReal[n][f] = a->samplesReal[f] * cos + a->samplesImag[f] * sin;
-            xMatrixImag[n][f] = -a->samplesReal[f] * sin + a->samplesImag[f] * cos;
+            xMatrixReal[f][n] = a->samplesReal[n] * cos + a->samplesImag[n] * sin;
+            xMatrixImag[f][n] = -a->samplesReal[n] * sin + a->samplesImag[n] * cos;
         }
     }
 }
 
-void computeR(aquisition_t* acq, float *xMatrixReal, float *xMatrixImag, float *rMatrixReal, float *rMatrixImag) {
-    acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
-
-    for (int32_t n = 0; n < a->testFreqCount; n++) {
-        for (int32_t f = 0; f < a->codesCount; f++) {
-            rMatrixReal[n][f] = xMatrixReal[n][f] * a->inputCodesReal[n][f] - xMatrixImag[n][f] * a->inputCodesImag[n][f];
-            rMatrixImag[n][f] = xMatrixReal[n][f] * a->inputCodesImag[n][f] + xMatrixImag[n][f] * a->inputCodesReal[n][f];
+void computeR(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag, float **rMatrixReal, float **rMatrixImag) {
+    for (int32_t f = 0; f < a->testFreqCount; f++) {
+        for (int32_t n = 0; n < a->codesCount; n++) {
+            rMatrixReal[f][n] = xMatrixReal[f][n] * a->inputCodesReal[f] - xMatrixImag[f][n] * a->inputCodesImag[f];
+            rMatrixImag[f][n] = xMatrixReal[f][n] * a->inputCodesImag[f] + xMatrixImag[f][n] * a->inputCodesReal[f];
         }
     }
 }
 
-void computeFourier(acquisitionInternal_t* acq) {
+void computeFourier(acquisitionInternal_t* acq, float *real, float *imag) {
+    acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
+
+    
+}
+
+void computeInvFourier(acquisitionInternal_t* acq, float *real, float *imag) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 }
 
-void computeInvFourier(acquisitionInternal_t* acq) {
-    acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
-}
-
-int computeMaxValue(acquisitionInternal_t* acq, float* rMatrixReal, float* rMatrixImag, float sMax) {
+float computeMaxValue(acquisitionInternal_t* acq, float **rMatrixReal, float **rMatrixImag, float sMax) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
     float absValue = 0.0;
 
-    for (int32_t n = 0; n < a->testFreqCount; n++) {
-        for (int32_t f = 0; f < a->sampleCount; f++) {
-            absValue = rMatrixReal[n][f] * rMatrixReal[n][f] + rMatrixImag[n][f] * rMatrixImag[n][f];
+    for (int32_t f = 0; f < a->testFreqCount; f++) {
+        for (int32_t n = 0; n < a->sampleCount; n++) {
+            absValue = rMatrixReal[f][n] * rMatrixReal[f][n] + rMatrixImag[f][n] * rMatrixImag[f][n];
             if(absValue > sMax) {
                 sMax = absValue;
-                a->codePhase = a->sampleCount - f;
-                a->dopplerFrequency = a->testFrequencies[n];
+                a->codePhase = a->sampleCount - n;
+                a->dopplerFrequency = a->testFrequencies[f];
             }
         }
     }
@@ -154,7 +149,7 @@ int computeMaxValue(acquisitionInternal_t* acq, float* rMatrixReal, float* rMatr
     return sMax;
 }
 
-void estimatePIn(acquisitionInternal_t* acq) {
+float estimatePIn(acquisitionInternal_t* acq) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
     float pIn = 0.0;
 
@@ -169,35 +164,50 @@ __attribute__((noipa))
 bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* testFrequencies) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
-	int xMatrixReal[a->testFreqCount][a->sampleCount];
-    int xMatrixImag[a->testFreqCount][a->sampleCount];
+    a->testFreqCount = testFreqCount;
+    a->testFrequencies = testFrequencies;
 
-    int rMatrixReal[a->testFreqCount][a->sampleCount];
-    int rMatrixImag[a->testFreqCount][a->sampleCount];
+    float *xMatrixReal[a->testFreqCount];
+    float *xMatrixImag[a->testFreqCount];
+
+    float *rMatrixReal[a->testFreqCount];
+    float *rMatrixImag[a->testFreqCount];
+
+    for (int i = 0; i < a->testFreqCount; i++) {
+        //printf("%i \n", i);
+        float *rowXReal = malloc(a->sampleCount * sizeof(float));
+        float *rowXImag = malloc(a->sampleCount * sizeof(float));
+        float *rowRReal = malloc(a->sampleCount * sizeof(float));
+        float *rowRImag = malloc(a->sampleCount * sizeof(float));
+        xMatrixReal[i] = rowXReal;
+        xMatrixImag[i] = rowXImag;
+        rMatrixReal[i] = rowRReal;
+        rMatrixImag[i] = rowRImag;
+    }
 
     float sMax = 0.0;
     float pIn = 0.0;
 
     computeX(a, xMatrixReal, xMatrixImag);
 
-    computeFourier(a, a->codesReal, a->codesImag);
+    computeFourier(a, a->inputCodesReal, a->inputCodesImag);
 
     for(int32_t n = 0; n < a->sampleCount; n++) {
-        a->codesImag[n] = -a->codesImag[n];
+        a->inputCodesReal[n] = -a->inputCodesImag[n];
     }
 
-    for(int32_t f = 0; n < testFreqCount; f++) {
+    for(int32_t f = 0; f < testFreqCount; f++) {
         computeFourier(a, xMatrixReal[f], xMatrixImag[f]);
     }
     
     computeR(a, xMatrixReal, xMatrixImag, xMatrixReal, xMatrixImag);
 
-    computeInvFourier(a, rMatrixReal, rMatrixImag);
+    for (int32_t f = 0; f < testFreqCount; f++) {
+        computeInvFourier(a, rMatrixReal[f], rMatrixImag[f]);
 
-    for (int32_t n = 0; n < testFreqCount; n++) {
-        for (int32_t f = 0; f < sampleCount; f++) {
-            rMatrixReal[n][f] /= sampleCount;
-            rMatrixImag[n][f] /= sampleCount;
+        for (int32_t n = 0; n < a->sampleCount; n++) {
+            rMatrixReal[f][n] /= a->sampleCount;
+            rMatrixImag[f][n] /= a->sampleCount;
         }
     }
 
@@ -205,7 +215,7 @@ bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* 
 
     pIn = estimatePIn(a);
 
-    bool result = ((sMax / pIn) > a->gamma);
+    bool result = ((sMax / pIn) > 0.015);
 
 	return result; // return whether acquisition was achieved or not!
 }
