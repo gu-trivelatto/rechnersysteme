@@ -92,50 +92,116 @@ void computeX(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag
     float angle = 0.0;
     float cos = 0.0;
     float sin = 0.0;
+    float multiplier = 2 * M_PI / F_S;
+    float *xReal, *xImag;
 
     for (int32_t f = 0; f < a->testFreqCount; f++) {
+        float freqMult = multiplier * a->testFrequencies[f];
+        xReal = xMatrixReal[f];
+        xImag = xMatrixImag[f];
+
         for (int32_t n = 0; n < a->sampleCount; n++) {
-            angle = 2 * M_PI * a->testFrequencies[f] * n / F_S;
+            angle = freqMult * n;
             cos = cosf(angle);
             sin = sinf(angle);
 
-            xMatrixReal[f][n] = a->samplesReal[n] * cos + a->samplesImag[n] * sin;
-            xMatrixImag[f][n] = -a->samplesReal[n] * sin + a->samplesImag[n] * cos;
+            xReal[n] = a->samplesReal[n] * cos + a->samplesImag[n] * sin;
+            xImag[n] = -a->samplesReal[n] * sin + a->samplesImag[n] * cos;
         }
     }
 }
 
 void computeR(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag, float **rMatrixReal, float **rMatrixImag) {
+    float *rReal, *rImag;
+    float *xReal, *xImag;
+    float codeReal, codeImag;
+
     for (int32_t f = 0; f < a->testFreqCount; f++) {
+        rReal = rMatrixReal[f];
+        rImag = rMatrixImag[f];
+        xReal = xMatrixReal[f];
+        xImag = xMatrixImag[f];
+        codeReal = a->inputCodesReal[f];
+        codeImag = a->inputCodesImag[f];
+
         for (int32_t n = 0; n < a->codesCount; n++) {
-            rMatrixReal[f][n] = xMatrixReal[f][n] * a->inputCodesReal[f] - xMatrixImag[f][n] * a->inputCodesImag[f];
-            rMatrixImag[f][n] = xMatrixReal[f][n] * a->inputCodesImag[f] + xMatrixImag[f][n] * a->inputCodesReal[f];
+            rReal[n] = xReal[n] * codeReal - xImag[n] * codeImag;
+            rImag[n] = xReal[n] * codeImag + xImag[n] * codeReal;
         }
     }
 }
 
-void computeFourier(acquisitionInternal_t* acq, float *real, float *imag) {
+void computeFourier(acquisitionInternal_t* acq, float *real, float *imag, int n) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
+    // if (n <= 1) {
+    //     return;
+    // }
 
+    // float *evenReal = malloc(n / 2 * sizeof(float));
+    // float *evenImag = malloc(n / 2 * sizeof(float));
+    // float *oddReal = malloc(n / 2 * sizeof(float));
+    // float *oddImag = malloc(n / 2 * sizeof(float));
+
+    // for (int i = 0; i < n / 2; i++) {
+    //     evenReal[i] = real[2 * i];
+    //     evenImag[i] = imag[2 * i];
+    //     oddReal[i] = real[2 * i + 1];
+    //     oddImag[i] = imag[2 * i + 1];
+    // }
+
+    // computeFourier(acq, evenReal, evenImag, n / 2);
+    // computeFourier(acq, oddReal, oddImag, n / 2);
+
+    // for (int k = 0; k < n / 2; k++) {
+    //     float angle = -2 * M_PI * k / n;
+    //     float cosVal = cos(angle);
+    //     float sinVal = sin(angle);
+
+    //     float re = oddReal[k] * cosVal - oddImag[k] * sinVal;
+    //     float im = oddReal[k] * sinVal + oddImag[k] * cosVal;
+
+    //     real[k] = evenReal[k] + re;
+    //     imag[k] = evenImag[k] + im;
+    //     real[k + n / 2] = evenReal[k] - re;
+    //     imag[k + n / 2] = evenImag[k] - im;
+    // }
+
+    // free(evenReal);
+    // free(evenImag);
+    // free(oddReal);
+    // free(oddImag);
+   
 }
 
-void computeInvFourier(acquisitionInternal_t* acq, float *real, float *imag) {
+void computeInvFourier(acquisitionInternal_t* acq, float *real, float *imag, int n) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
+
+    // computeFourier(acq, imag, real, n);
+
+    // for (int i = 0; i < n; i++) {
+    //     real[i] /= n;
+    //     imag[i] /= n;
+    // }
 }
 
 float computeMaxValue(acquisitionInternal_t* acq, float **rMatrixReal, float **rMatrixImag, float sMax) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
     float absValue = 0.0;
+    float *rReal, *rImag;
+    float testFreq;
 
     for (int32_t f = 0; f < a->testFreqCount; f++) {
+        rReal = rMatrixReal[f];
+        rImag = rMatrixImag[f];
+        testFreq = a->testFrequencies[f];
         for (int32_t n = 0; n < a->sampleCount; n++) {
-            absValue = rMatrixReal[f][n] * rMatrixReal[f][n] + rMatrixImag[f][n] * rMatrixImag[f][n];
+            absValue = rReal[n] * rReal[n] + rImag[n] * rImag[n];
             if(absValue > sMax) {
                 sMax = absValue;
                 a->codePhase = a->sampleCount - n;
-                a->dopplerFrequency = a->testFrequencies[f];
+                a->dopplerFrequency = testFreq;
             }
         }
     }
@@ -158,8 +224,13 @@ __attribute__((noipa))
 bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* testFrequencies) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
+    float *rReal, *rImag;
+
     a->testFreqCount = testFreqCount;
-    a->testFrequencies = testFrequencies;
+
+    for (int i = 0; i < a->testFreqCount; i++) {
+        a->testFrequencies[i] = testFrequencies[i];
+    }
 
     float *xMatrixReal[a->testFreqCount];
     float *xMatrixImag[a->testFreqCount];
@@ -184,24 +255,27 @@ bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* 
 
     computeX(a, xMatrixReal, xMatrixImag);
 
-    computeFourier(a, a->inputCodesReal, a->inputCodesImag);
+    computeFourier(a, a->inputCodesReal, a->inputCodesImag, a->sampleCount);
 
     for(int32_t n = 0; n < a->sampleCount; n++) {
-        a->inputCodesReal[n] = -a->inputCodesImag[n];
+        a->inputCodesImag[n] = -a->inputCodesImag[n];
     }
 
     for(int32_t f = 0; f < testFreqCount; f++) {
-        computeFourier(a, xMatrixReal[f], xMatrixImag[f]);
+        computeFourier(a, xMatrixReal[f], xMatrixImag[f], a->sampleCount);
     }
     
-    computeR(a, xMatrixReal, xMatrixImag, xMatrixReal, xMatrixImag);
+    computeR(a, xMatrixReal, xMatrixImag, rMatrixReal, rMatrixImag);
 
     for (int32_t f = 0; f < testFreqCount; f++) {
-        computeInvFourier(a, rMatrixReal[f], rMatrixImag[f]);
+        computeInvFourier(a, rMatrixReal[f], rMatrixImag[f], a->sampleCount);
 
+        rReal = rMatrixReal[f];
+        rImag = rMatrixImag[f];
+        
         for (int32_t n = 0; n < a->sampleCount; n++) {
-            rMatrixReal[f][n] /= a->sampleCount;
-            rMatrixImag[f][n] /= a->sampleCount;
+            rReal[n] /= a->sampleCount;
+            rImag[n] /= a->sampleCount;
         }
     }
 
