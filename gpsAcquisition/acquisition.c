@@ -114,19 +114,16 @@ void computeX(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag
 void computeR(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag, float **rMatrixReal, float **rMatrixImag) {
     float *rReal, *rImag;
     float *xReal, *xImag;
-    float codeReal, codeImag;
 
     for (int32_t f = 0; f < a->testFreqCount; f++) {
         rReal = rMatrixReal[f];
         rImag = rMatrixImag[f];
         xReal = xMatrixReal[f];
         xImag = xMatrixImag[f];
-        codeReal = a->inputCodesReal[f];
-        codeImag = a->inputCodesImag[f];
 
         for (int32_t n = 0; n < a->codesCount; n++) {
-            rReal[n] = xReal[n] * codeReal - xImag[n] * codeImag;
-            rImag[n] = xReal[n] * codeImag + xImag[n] * codeReal;
+            rReal[n] = xReal[n] * a->inputCodesReal[n] - xImag[n] * a->inputCodesImag[n];
+            rImag[n] = xReal[n] * a->inputCodesImag[n] + xImag[n] * a->inputCodesReal[n];
         }
     }
 }
@@ -134,55 +131,55 @@ void computeR(acquisitionInternal_t* a, float **xMatrixReal, float **xMatrixImag
 void computeFourier(acquisitionInternal_t* acq, float *real, float *imag, int n) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
-    // if (n <= 1) {
-    //     return;
-    // }
+    if (n <= 1) {
+        return;
+    }
 
-    // float *evenReal = malloc(n / 2 * sizeof(float));
-    // float *evenImag = malloc(n / 2 * sizeof(float));
-    // float *oddReal = malloc(n / 2 * sizeof(float));
-    // float *oddImag = malloc(n / 2 * sizeof(float));
+    float *evenReal = malloc(n / 2 * sizeof(float));
+    float *evenImag = malloc(n / 2 * sizeof(float));
+    float *oddReal = malloc(n / 2 * sizeof(float));
+    float *oddImag = malloc(n / 2 * sizeof(float));
 
-    // for (int i = 0; i < n / 2; i++) {
-    //     evenReal[i] = real[2 * i];
-    //     evenImag[i] = imag[2 * i];
-    //     oddReal[i] = real[2 * i + 1];
-    //     oddImag[i] = imag[2 * i + 1];
-    // }
+    for (int i = 0; i < n / 2; i++) {
+        evenReal[i] = real[2 * i];
+        evenImag[i] = imag[2 * i];
+        oddReal[i] = real[2 * i + 1];
+        oddImag[i] = imag[2 * i + 1];
+    }
 
-    // computeFourier(acq, evenReal, evenImag, n / 2);
-    // computeFourier(acq, oddReal, oddImag, n / 2);
+    computeFourier(acq, evenReal, evenImag, n / 2);
+    computeFourier(acq, oddReal, oddImag, n / 2);
 
-    // for (int k = 0; k < n / 2; k++) {
-    //     float angle = -2 * M_PI * k / n;
-    //     float cosVal = cos(angle);
-    //     float sinVal = sin(angle);
+    for (int k = 0; k < n / 2; k++) {
+        float angle = -2 * M_PI * k / n;
+        float cosVal = cos(angle);
+        float sinVal = sin(angle);
+    
+        float re = oddReal[k] * cosVal - oddImag[k] * sinVal;
+        float im = oddReal[k] * sinVal + oddImag[k] * cosVal;
 
-    //     float re = oddReal[k] * cosVal - oddImag[k] * sinVal;
-    //     float im = oddReal[k] * sinVal + oddImag[k] * cosVal;
+        real[k] = evenReal[k] + re;
+        imag[k] = evenImag[k] + im;
+        real[k + n / 2] = evenReal[k] - re;
+        imag[k + n / 2] = evenImag[k] - im;
+    }
 
-    //     real[k] = evenReal[k] + re;
-    //     imag[k] = evenImag[k] + im;
-    //     real[k + n / 2] = evenReal[k] - re;
-    //     imag[k + n / 2] = evenImag[k] - im;
-    // }
+    free(evenReal);
+    free(evenImag);
+    free(oddReal);
+    free(oddImag);
 
-    // free(evenReal);
-    // free(evenImag);
-    // free(oddReal);
-    // free(oddImag);
-   
 }
 
 void computeInvFourier(acquisitionInternal_t* acq, float *real, float *imag, int n) {
     acquisitionInternal_t * a = (acquisitionInternal_t*) acq;
 
-    // computeFourier(acq, imag, real, n);
+    computeFourier(acq, imag, real, n);
 
-    // for (int i = 0; i < n; i++) {
-    //     real[i] /= n;
-    //     imag[i] /= n;
-    // }
+    for (int i = 0; i < n; i++) {
+        real[i] /= n;
+        imag[i] /= n;
+    }
 }
 
 float computeMaxValue(acquisitionInternal_t* acq, float **rMatrixReal, float **rMatrixImag, float sMax) {
@@ -269,14 +266,6 @@ bool startAcquisition(acquisition_t* acq, int32_t testFreqCount, const int32_t* 
 
     for (int32_t f = 0; f < testFreqCount; f++) {
         computeInvFourier(a, rMatrixReal[f], rMatrixImag[f], a->sampleCount);
-
-        rReal = rMatrixReal[f];
-        rImag = rMatrixImag[f];
-        
-        for (int32_t n = 0; n < a->sampleCount; n++) {
-            rReal[n] /= a->sampleCount;
-            rImag[n] /= a->sampleCount;
-        }
     }
 
     sMax = computeMaxValue(a, rMatrixReal, rMatrixImag, sMax);
