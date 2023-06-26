@@ -26,6 +26,12 @@ static const float test3InputCodes[] = {-1.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, -
 
 static const int32_t test3Frequencies[] =  {-5500, -5000, -4500, -4000};
 
+static const float test4InputSamples[][2] = {{-0.00353538F, 0.0025173F}, {-0.00216759F, 0.00562838F}, {9.33645E-4F, 0.0042384F}, {0.00450896F, 0.00261432F}};
+
+static const float test4InputCodes[] = {-1.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F};
+
+static const int32_t test4Frequencies[] =  {-5500, -5000, -4500, -4000};
+
 
 static const testCase_t testCases[] = {
         {
@@ -63,6 +69,19 @@ static const testCase_t testCases[] = {
             .dopplerFrequency = -4500,
             .acquisition = true,
             .codePhase = 79,
+            .maxMagnitude = 2.578257E-5F,
+            .inputPower = 0.0011476198F,
+            .gamma = 0.022466125F
+        },
+        {
+            .complexSampleCount = 4,
+            .inputCodes = test4InputCodes,
+            .inputSamples = &test4InputSamples[0][0],
+            .testFreqCount = sizeof(test4Frequencies) / sizeof (int32_t),
+            .testFrequencies = test4Frequencies,
+            .dopplerFrequency = -4500,
+            .acquisition = true,
+            .codePhase = 69420,
             .maxMagnitude = 2.578257E-5F,
             .inputPower = 0.0011476198F,
             .gamma = 0.022466125F
