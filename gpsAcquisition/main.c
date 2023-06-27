@@ -15,7 +15,7 @@ void loadSamplesAndCodes(acquisition_t* acq, const testCase_t* testCase, int32_t
  * If present argv[2] = nrOfSamples
  */
 int main(int argc, char ** argv) {
-	int32_t testCaseId = 0; // Default Test-Case without any args
+	int32_t testCaseId = 2; // Default Test-Case without any args
 
 	if (argc >= 2) {
 		testCaseId = strtol(argv[1], NULL, 10);
@@ -26,7 +26,7 @@ int main(int argc, char ** argv) {
 	int32_t nrOfSamples;
 	if (argc >= 3) {
 		nrOfSamples = strtol(argv[2], NULL, 10);
-		printf("Overriding to %ld samples\n", nrOfSamples);
+		printf("Overriding to %d samples\n", nrOfSamples);
 	} else {
 		nrOfSamples = testCase->complexSampleCount;
 	}
