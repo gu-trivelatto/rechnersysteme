@@ -7,21 +7,23 @@
 #include <math.h>
 
 #define F_S 2000000 // sample frequency of 2MHz
-#define M 2048
+#define M 2048      // array size for chirp Z-transform (M >= samples * 2 - 1)
+                    // assuming samples will always be 1000
 
 typedef struct
 {
+    // final results
     int32_t codePhase;
     int32_t dopplerFrequency;
-
+    // sample arrays and counter
     int32_t sampleCount;
     float *samplesReal;
     float *samplesImag;
-
+    // code arrays and counter
     int32_t codesCount;
     float *inputCodesReal;
     float *inputCodesImag;
-
+    // test freq array and counter
     int32_t testFreqCount;
     int32_t *testFrequencies;
 
@@ -41,8 +43,6 @@ typedef struct
     float *bimag;
     float *creal;
     float *cimag;
-
-    // float gamma;
 } acquisitionInternal_t;
 
 acquisition_t *allocateAcquisition(int32_t nrOfSamples)
@@ -87,8 +87,6 @@ acquisition_t *allocateAcquisition(int32_t nrOfSamples)
     memset(a->creal, 0, M * sizeof(float));
     memset(a->cimag, 0, M * sizeof(float));
 
-    // a->gamma = malloc(sizeof(float));
-
     return (acquisition_t *)a;
 }
 
@@ -117,8 +115,6 @@ void deleteAcquisition(acquisition_t *acq)
     free(a->inputCodesImag);
 
     free(a->testFrequencies);
-
-    // free(a->gamma);
 
     // after freeing all contained structures on heap, free acq itself
     free(acq);
@@ -192,149 +188,56 @@ void computeR(acquisitionInternal_t *a, float **xMatrixReal, float **xMatrixImag
     }
 }
 
-void computeFourier(acquisitionInternal_t *acq, float *real, float *imag, int n)
-{
-    acquisitionInternal_t *a = (acquisitionInternal_t *)acq;
-
-    // Find the nearest power of 2 greater than or equal to n
-    int fftSize = 1;
-    while (fftSize < n)
-    {
-        fftSize *= 2;
+int reverseBits(int num, int levels) {
+    int reverseNum = 0;
+    for (int i = 0; i < levels; i++) {
+        reverseNum <<= 1;
+        if (num & 1)
+            reverseNum |= 1;
+        num >>= 1;
     }
-
-    // Perform zero-padding if necessary
-    float *paddedReal = calloc(fftSize, sizeof(float));
-    float *paddedImag = calloc(fftSize, sizeof(float));
-
-    for (int i = 0; i < n; i++)
-    {
-        paddedReal[i] = real[i];
-        paddedImag[i] = imag[i];
-    }
-
-    if (n < fftSize)
-    {
-        for (int i = n; i < fftSize; i++)
-        {
-            paddedReal[i] = 0.0;
-            paddedImag[i] = 0.0;
-        }
-    }
-
-    // Perform the FFT on the padded arrays
-
-    if (fftSize <= 1)
-    {
-        return;
-    }
-
-    float *evenReal = malloc(fftSize / 2 * sizeof(float));
-    float *evenImag = malloc(fftSize / 2 * sizeof(float));
-    float *oddReal = malloc(fftSize / 2 * sizeof(float));
-    float *oddImag = malloc(fftSize / 2 * sizeof(float));
-
-    for (int i = 0; i < fftSize / 2; i++)
-    {
-        evenReal[i] = paddedReal[2 * i];
-        evenImag[i] = paddedImag[2 * i];
-        oddReal[i] = paddedReal[2 * i + 1];
-        oddImag[i] = paddedImag[2 * i + 1];
-    }
-
-    computeFourier(acq, evenReal, evenImag, fftSize / 2);
-    computeFourier(acq, oddReal, oddImag, fftSize / 2);
-
-    for (int k = 0; k < fftSize / 2; k++)
-    {
-        float angle = -2 * M_PI * k / fftSize;
-        float cosVal = cos(angle);
-        float sinVal = sin(angle);
-
-        float re = oddReal[k] * cosVal - oddImag[k] * sinVal;
-        float im = oddReal[k] * sinVal + oddImag[k] * cosVal;
-
-        paddedReal[k] = evenReal[k] + re;
-        paddedImag[k] = evenImag[k] + im;
-        paddedReal[k + fftSize / 2] = evenReal[k] - re;
-        paddedImag[k + fftSize / 2] = evenImag[k] - im;
-    }
-
-    // Copy the computed FFT values back to the original arrays
-    for (int i = 0; i < n; i++)
-    {
-        real[i] = paddedReal[i];
-        imag[i] = paddedImag[i];
-    }
-
-    // Free the dynamically allocated memory
-    free(evenReal);
-    free(evenImag);
-    free(oddReal);
-    free(oddImag);
-    free(paddedReal);
-    free(paddedImag);
+    return reverseNum;
 }
 
-void computeInvFourier(acquisitionInternal_t *acq, float *real, float *imag, int n)
-{
-    acquisitionInternal_t *a = (acquisitionInternal_t *)acq;
-
-    computeFourier(acq, imag, real, n);
-
-    for (int i = 0; i < n; i++)
-    {
-        real[i] /= n;
-        imag[i] /= n;
-    }
-}
-static int reverseBits(int val, int width)
-{
-    int result = 0;
-    for (int i = 0; i < width; i++, val >>= 1)
-        result = (result << 1) | (val & 1U);
-    return result;
+int flipArray(float *array, int i, int j) {
+    float temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
 }
 
 void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
 {
     float wtemp, wr, wpr, wpi, wi, theta;
     float tempr, tempi;
-    int n, mmax, m, i, j, k, istep, update;
-    int levels = 11;
 
-    n = M * 2;
+    int n = M * 2;
 
     // perform bit reversal (according to "butterfly diagram"),
     // with the real part on the even indexes and the complex
     // part on the odd indexes
-    for (i = 0; i < M; i++)
+    for (int i = 0; i < M; i++)
     {
-        j = reverseBits(i, levels);
+        int j = reverseBits(i, 11);
         if (j > i)
         {
-            float temp = real[i];
-            real[i] = real[j];
-            real[j] = temp;
-            temp = imag[i];
-            imag[i] = imag[j];
-            imag[j] = temp;
+            flipArray(real, i, j);
+            flipArray(imag, i, j);
         }
     }
 
     // copy input data (real and imaginary parts) into a single array
-    for (i = 0, j = 0; i < n; i += 2, j++)
+    for (int i = 0, j = 0; i < n; i += 2, j++)
     {
         a->data[i] = real[j];
         a->data[i + 1] = imag[j];
     }
 
     // Danielson-Lanzcos routine
-    mmax = 2;
+    int mmax = 2;
     // external loop
     while (n > mmax)
     {
-        istep = mmax << 1;
+        int istep = mmax << 1;
         theta = isign * (2 * M_PI / mmax);
         wtemp = sinf(0.5f * theta);
         wpr = -2.0f * wtemp * wtemp;
@@ -342,11 +245,11 @@ void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
         wr = 1.0f;
         wi = 0.0f;
         // internal loops
-        for (m = 1; m < mmax; m += 2)
+        for (int m = 1; m < mmax; m += 2)
         {
-            for (i = m; i <= n; i += istep)
+            for (int i = m; i <= n; i += istep)
             {
-                j = i + mmax;
+                int j = i + mmax;
                 tempr = wr * a->data[j - 1] - wi * a->data[j];
                 tempi = wr * a->data[j] + wi * a->data[j - 1];
                 a->data[j - 1] = a->data[i - 1] - tempr;
@@ -361,7 +264,7 @@ void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
         mmax = istep;
     }
 
-    for (i = 0, j = 0; i < n; i += 2, j++)
+    for (int i = 0, j = 0; i < n; i += 2, j++)
     {
         real[j] = a->data[i];
         imag[j] = a->data[i + 1];
