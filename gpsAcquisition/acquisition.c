@@ -9,6 +9,15 @@
 #define F_S 2000000 // sample frequency of 2MHz
 #define M 2048      // array size for chirp Z-transform (M >= samples * 2 - 1)
                     // assuming samples will always be 1000
+#define N_SAMPLES 1000
+#define N_FREQ 4
+
+// complex variable structure
+typedef struct
+{
+    float Re;
+    float Im;
+} complex;
 
 typedef struct
 {
@@ -26,6 +35,12 @@ typedef struct
     // test freq array and counter
     int32_t testFreqCount;
     int32_t *testFrequencies;
+
+    // arrays for performing the acquisition algorithm itself
+    float (*xMatrixReal)[N_SAMPLES];
+    float (*xMatrixImag)[N_SAMPLES];
+    float (*rMatrixReal)[N_SAMPLES];
+    float (*rMatrixImag)[N_SAMPLES];
 
     // array used in radix-2 algorithm
     float *data;
@@ -64,6 +79,15 @@ acquisition_t *allocateAcquisition(int32_t nrOfSamples)
 
     a->testFreqCount = 0;
     a->testFrequencies = malloc(4 * sizeof(int32_t));
+
+    a->xMatrixReal = malloc(sizeof(float[N_FREQ][nrOfSamples]));
+    a->xMatrixImag = malloc(sizeof(float[N_FREQ][nrOfSamples]));
+    a->rMatrixReal = malloc(sizeof(float[N_FREQ][nrOfSamples]));
+    a->rMatrixImag = malloc(sizeof(float[N_FREQ][nrOfSamples]));
+    memset(a->xMatrixReal, 0, (N_FREQ * nrOfSamples) * sizeof(float));
+    memset(a->xMatrixImag, 0, (N_FREQ * nrOfSamples) * sizeof(float));
+    memset(a->rMatrixReal, 0, (N_FREQ * nrOfSamples) * sizeof(float));
+    memset(a->rMatrixImag, 0, (N_FREQ * nrOfSamples) * sizeof(float));
 
     a->data = malloc(M * 2 * sizeof(float));
 
@@ -142,7 +166,7 @@ void enterCode(acquisition_t *acq, float real, float imag)
     a->codesCount += 1;
 }
 
-void computeX(acquisitionInternal_t *a, float **xMatrixReal, float **xMatrixImag)
+void computeX(acquisitionInternal_t *a)
 {
     float angle = 0.0;
     float cos = 0.0;
@@ -153,8 +177,8 @@ void computeX(acquisitionInternal_t *a, float **xMatrixReal, float **xMatrixImag
     for (int32_t f = 0; f < a->testFreqCount; f++)
     {
         float freqMult = multiplier * a->testFrequencies[f];
-        xReal = xMatrixReal[f];
-        xImag = xMatrixImag[f];
+        xReal = a->xMatrixReal[f];
+        xImag = a->xMatrixImag[f];
 
         for (int32_t n = 0; n < a->sampleCount; n++)
         {
@@ -168,17 +192,17 @@ void computeX(acquisitionInternal_t *a, float **xMatrixReal, float **xMatrixImag
     }
 }
 
-void computeR(acquisitionInternal_t *a, float **xMatrixReal, float **xMatrixImag, float **rMatrixReal, float **rMatrixImag)
+void computeR(acquisitionInternal_t *a)
 {
     float *rReal, *rImag;
     float *xReal, *xImag;
 
     for (int32_t f = 0; f < a->testFreqCount; f++)
     {
-        rReal = rMatrixReal[f];
-        rImag = rMatrixImag[f];
-        xReal = xMatrixReal[f];
-        xImag = xMatrixImag[f];
+        rReal = a->rMatrixReal[f];
+        rImag = a->rMatrixImag[f];
+        xReal = a->xMatrixReal[f];
+        xImag = a->xMatrixImag[f];
 
         for (int32_t n = 0; n < a->codesCount; n++)
         {
@@ -199,40 +223,51 @@ int reverseBits(int num, int levels) {
     return reverseNum;
 }
 
-int flipArray(float *array, int i, int j) {
+void swapArray(float *array, int i, int j) {
     float temp = array[i];
     array[i] = array[j];
     array[j] = temp;
 }
 
+void bitReversal(float *real, float *imag) {
+    for (int i = 0; i < M; i++) {
+        int j = reverseBits(i, 11);
+        if (j > i)
+        {
+            swapArray(real, i, j);
+            swapArray(imag, i, j);
+        }
+    }
+}
+
+void concatArrays(float *target, float *real, float *imag, int n) {
+    for (int i = 0, j = 0; i < n; i += 2, j++) {
+        target[i] = real[j];
+        target[i + 1] = imag[j];
+    }
+}
+
+void separateArrays(float *targetReal, float *targetImag, float *source, int n) {
+    for (int i = 0, j = 0; i < n; i += 2, j++) {
+            targetReal[j] = source[i];
+            targetImag[j] = source[i + 1];
+        }
+}
+
 void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
 {
-    float wtemp, wr, wpr, wpi, wi, theta;
-    float tempr, tempi;
-
     int n = M * 2;
+
+    float wtemp,wr,wpr,wpi,wi,theta,tempr,tempi;
 
     // perform bit reversal (according to "butterfly diagram"),
     // with the real part on the even indexes and the complex
     // part on the odd indexes
-    for (int i = 0; i < M; i++)
-    {
-        int j = reverseBits(i, 11);
-        if (j > i)
-        {
-            flipArray(real, i, j);
-            flipArray(imag, i, j);
-        }
-    }
+    bitReversal(real, imag);
 
     // copy input data (real and imaginary parts) into a single array
-    for (int i = 0, j = 0; i < n; i += 2, j++)
-    {
-        a->data[i] = real[j];
-        a->data[i + 1] = imag[j];
-    }
+    concatArrays(a->data, real, imag, n);
 
-    // Danielson-Lanzcos routine
     int mmax = 2;
     // external loop
     while (n > mmax)
@@ -264,11 +299,7 @@ void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
         mmax = istep;
     }
 
-    for (int i = 0, j = 0; i < n; i += 2, j++)
-    {
-        real[j] = a->data[i];
-        imag[j] = a->data[i + 1];
-    }
+    separateArrays(real, imag, a->data, n);
 }
 
 /*
@@ -376,7 +407,7 @@ void inverseFft(acquisitionInternal_t *a, float *real, float *imag)
     fft(a, imag, real);
 }
 
-float computeMaxValue(acquisitionInternal_t *acq, float **rMatrixReal, float **rMatrixImag)
+float computeMaxValue(acquisitionInternal_t *acq)
 {
     acquisitionInternal_t *a = (acquisitionInternal_t *)acq;
 
@@ -387,8 +418,8 @@ float computeMaxValue(acquisitionInternal_t *acq, float **rMatrixReal, float **r
 
     for (int32_t f = 0; f < a->testFreqCount; f++)
     {
-        rReal = rMatrixReal[f];
-        rImag = rMatrixImag[f];
+        rReal = a->rMatrixReal[f];
+        rImag = a->rMatrixImag[f];
         testFreq = a->testFrequencies[f];
         for (int32_t n = 0; n < a->sampleCount; n++)
         {
@@ -404,9 +435,8 @@ float computeMaxValue(acquisitionInternal_t *acq, float **rMatrixReal, float **r
     return sMax;
 }
 
-float estimatePIn(acquisitionInternal_t *acq)
+float estimatePIn(acquisitionInternal_t *a)
 {
-    acquisitionInternal_t *a = (acquisitionInternal_t *)acq;
     float pIn = 0.0;
 
     for (int i = 0; i < a->sampleCount; i++)
@@ -438,28 +468,10 @@ __attribute__((noipa)) bool startAcquisition(acquisition_t *acq, int32_t testFre
         a->testFrequencies[i] = testFrequencies[i];
     }
 
-    float *xMatrixReal[a->testFreqCount];
-    float *xMatrixImag[a->testFreqCount];
-
-    float *rMatrixReal[a->testFreqCount];
-    float *rMatrixImag[a->testFreqCount];
-
-    for (int i = 0; i < a->testFreqCount; i++)
-    {
-        float *rowXReal = malloc(a->sampleCount * sizeof(float));
-        float *rowXImag = malloc(a->sampleCount * sizeof(float));
-        float *rowRReal = malloc(a->sampleCount * sizeof(float));
-        float *rowRImag = malloc(a->sampleCount * sizeof(float));
-        xMatrixReal[i] = rowXReal;
-        xMatrixImag[i] = rowXImag;
-        rMatrixReal[i] = rowRReal;
-        rMatrixImag[i] = rowRImag;
-    }
-
     float sMax = 0.0;
     float pIn = 0.0;
 
-    computeX(a, xMatrixReal, xMatrixImag);
+    computeX(a);
 
     fft(a, a->inputCodesReal, a->inputCodesImag);
     for (int32_t n = 0; n < a->sampleCount; n++)
@@ -469,23 +481,23 @@ __attribute__((noipa)) bool startAcquisition(acquisition_t *acq, int32_t testFre
 
     for (int32_t f = 0; f < testFreqCount; f++)
     {
-        fft(a, xMatrixReal[f], xMatrixImag[f]);
+        fft(a, a->xMatrixReal[f], a->xMatrixImag[f]);
     }
 
-    computeR(a, xMatrixReal, xMatrixImag, rMatrixReal, rMatrixImag);
+    computeR(a);
 
     for (int32_t f = 0; f < testFreqCount; f++)
     {
-        inverseFft(a, rMatrixReal[f], rMatrixImag[f]);
+        inverseFft(a, a->rMatrixReal[f], a->rMatrixImag[f]);
     }
     
     for (int32_t f = 0; f < testFreqCount; f++)
     {
-        scaleIdft(a, rMatrixReal[f], rMatrixImag[f]);
+        scaleIdft(a, a->rMatrixReal[f], a->rMatrixImag[f]);
     }
     
 
-    sMax = computeMaxValue(a, rMatrixReal, rMatrixImag);
+    sMax = computeMaxValue(a);
 
     pIn = estimatePIn(a);
 
