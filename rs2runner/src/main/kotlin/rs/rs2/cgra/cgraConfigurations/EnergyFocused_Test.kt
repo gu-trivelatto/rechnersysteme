@@ -62,7 +62,7 @@ class EnergyFocused: ICgraSchedulerModelProvider {
                 +IntegerMultiplyOperations() // multiply
                 +IntegerDivisionOperations // divide, remainder
                 // ------------ OR ----------------
-//                all32BitIntegerOperators() // could be used instead of typing up above operators manually
+//              all32BitIntegerOperators() // could be used instead of typing up above operators manually
 
 
                 // contents of defaultSinglePrecisionFloatOperators()
@@ -84,23 +84,23 @@ class EnergyFocused: ICgraSchedulerModelProvider {
                 +IntegerCoreOperations() // +, -, ==, !=, <, >=, u<, u>=
                 +ChunkMuxAndRouteOperations // Passthrough & Mux(a, b). Needed for architecture to work
                 +ChunkLogicOperations // 32bit And, Or, Xor
-//                +IntegerShiftOperations // <<, >>, >>>
+//              +IntegerShiftOperations // <<, >>, >>>
                 +IntegerMultiplyOperations() // multiply
-//                +IntegerDivisionOperations // divide, remainder
+//              +IntegerDivisionOperations // divide, remainder
                 // ------------ OR ----------------
-//                all32BitIntegerOperators() // could be used instead of typing up above operators manually
+//              all32BitIntegerOperators() // could be used instead of typing up above operators manually
 
 
                 // contents of defaultSinglePrecisionFloatOperators()
-//                +FloatConversions(withUnsigned = true) // int2float, float2int, float2uint, uint2float
+//              +FloatConversions(withUnsigned = true) // int2float, float2int, float2uint, uint2float
                 +FloatAddSub // Add, Sub
                 +FloatLogic // Absolute, Negate
                 +FloatMultiply //  Multiply
-//                +FloatDivision // divide
-//                +FloatSqrt // square root
+//              +FloatDivision // divide
+//              +FloatSqrt // square root
                 +FloatComparisons // ==, !=, <, <=
                 // ------------ OR ----------------
-//                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
+//              defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
             }
 
             // only 2 single Sin/Cos unit on specific PEs
@@ -109,7 +109,7 @@ class EnergyFocused: ICgraSchedulerModelProvider {
             }
 
             // Memory PEs
-            // operatorsFor(grid[2, 0], grid[1, 3]) {
+            // operatorsFor(grid[2, 0], grid[1, 3]) 
             operatorsFor(grid[0, 0]) {
                 +NativeMemoryOperations(withBarriers = false, withIntegratedOffset = true)  // load and store operations in signed, unsigned, 32, 16 and 8 bit
                 // [withIntegratedOffset]: addition operation can internally do a pointer addition like (arrBase + 12). Without it, saves additional operand & registerPort, uses regular, external addition

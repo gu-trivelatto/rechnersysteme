@@ -109,7 +109,7 @@ class EnergyFocused: ICgraSchedulerModelProvider {
             }
 
             // Memory PEs
-            // operatorsFor(grid[2, 0], grid[1, 3]) {
+            // operatorsFor(grid[2, 0], grid[1, 3]) 
             operatorsFor(grid[0, 1]) {
                 +NativeMemoryOperations(withBarriers = false, withIntegratedOffset = true)  // load and store operations in signed, unsigned, 32, 16 and 8 bit
                 // [withIntegratedOffset]: addition operation can internally do a pointer addition like (arrBase + 12). Without it, saves additional operand & registerPort, uses regular, external addition
@@ -132,3 +132,4 @@ class EnergyFocused: ICgraSchedulerModelProvider {
         return SharedCgraConfig.buildWrapperConfig()
     }
 }
+

@@ -76,7 +76,7 @@ class PerformanceFocused: ICgraSchedulerModelProvider {
                 +FloatSqrt // square root
                 +FloatComparisons // ==, !=, <, <=
                 // ------------ OR ----------------
-//                defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
+//              defaultSinglePrecisionFloatOperators() // could be used instead of typing up above operators manually
 
                 // SINCOS is not included in defaultSinglePrecisionFloatOperators()
                 +FloatTrigonometryOperations

@@ -44,20 +44,22 @@ typedef struct
 
     // array used in radix-2 algorithm
     float *data;
+
     // arrays used in complex convolution
-    float *xr;
-    float *xi;
-    float *yr;
-    float *yi;
+    float *xrBuffer;
+    float *xiBuffer;
+    float *yrBuffer;
+    float *yiBuffer;
+    
     // arrays used in bluestein algorithm
     float *cosTable;
     float *sinTable;
-    float *areal;
-    float *aimag;
-    float *breal;
-    float *bimag;
-    float *creal;
-    float *cimag;
+    float *oneRTemp;
+    float *oneITemp;
+    float *twoRTemp;
+    float *twoITemp;
+    float *threeRTemp;
+    float *threeITemp;
 } acquisitionInternal_t;
 
 acquisition_t *allocateAcquisition(int32_t nrOfSamples)
@@ -91,25 +93,25 @@ acquisition_t *allocateAcquisition(int32_t nrOfSamples)
 
     a->data = malloc(M * 2 * sizeof(float));
 
-    a->xr = malloc(M * sizeof(float));
-    a->xi = malloc(M * sizeof(float));
-    a->yr = malloc(M * sizeof(float));
-    a->yi = malloc(M * sizeof(float));
+    a->xrBuffer = malloc(M * sizeof(float));
+    a->xiBuffer = malloc(M * sizeof(float));
+    a->yrBuffer = malloc(M * sizeof(float));
+    a->yiBuffer = malloc(M * sizeof(float));
 
     a->cosTable = malloc(nrOfSamples * sizeof(float));
     a->sinTable = malloc(nrOfSamples * sizeof(float));
-    a->areal = malloc(M * sizeof(float));
-    a->aimag = malloc(M * sizeof(float));
-    a->breal = malloc(M * sizeof(float));
-    a->bimag = malloc(M * sizeof(float));
-    a->creal = malloc(M * sizeof(float));
-    a->cimag = malloc(M * sizeof(float));
-    memset(a->areal, 0, M * sizeof(float));
-    memset(a->aimag, 0, M * sizeof(float));
-    memset(a->breal, 0, M * sizeof(float));
-    memset(a->bimag, 0, M * sizeof(float));
-    memset(a->creal, 0, M * sizeof(float));
-    memset(a->cimag, 0, M * sizeof(float));
+    a->oneRTemp = malloc(M * sizeof(float));
+    a->oneITemp = malloc(M * sizeof(float));
+    a->twoRTemp = malloc(M * sizeof(float));
+    a->twoITemp = malloc(M * sizeof(float));
+    a->threeRTemp = malloc(M * sizeof(float));
+    a->threeITemp = malloc(M * sizeof(float));
+    memset(a->oneRTemp, 0, M * sizeof(float));
+    memset(a->oneITemp, 0, M * sizeof(float));
+    memset(a->twoRTemp, 0, M * sizeof(float));
+    memset(a->twoITemp, 0, M * sizeof(float));
+    memset(a->threeRTemp, 0, M * sizeof(float));
+    memset(a->threeITemp, 0, M * sizeof(float));
 
     return (acquisition_t *)a;
 }
@@ -118,18 +120,18 @@ void deleteAcquisition(acquisition_t *acq)
 {
     acquisitionInternal_t *a = (acquisitionInternal_t *)acq;
     free(a->data);
-    free(a->xr);
-    free(a->xi);
-    free(a->yr);
-    free(a->yi);
+    free(a->xrBuffer);
+    free(a->xiBuffer);
+    free(a->yrBuffer);
+    free(a->yiBuffer);
     free(a->cosTable);
     free(a->sinTable);
-    free(a->areal);
-    free(a->aimag);
-    free(a->breal);
-    free(a->bimag);
-    free(a->creal);
-    free(a->cimag);
+    free(a->oneRTemp);
+    free(a->oneITemp);
+    free(a->twoRTemp);
+    free(a->twoITemp);
+    free(a->threeRTemp);
+    free(a->threeITemp);
 
     // free also everything else that was allocated in [allocateAcquisition]
     free(a->samplesReal);
@@ -229,47 +231,47 @@ void swapArray(float *array, int i, int j) {
     array[j] = temp;
 }
 
+// Perform bit reversal on the input arrays
 void bitReversal(float *real, float *imag) {
     for (int i = 0; i < M; i++) {
-        int j = reverseBits(i, 11);
-        if (j > i)
-        {
-            swapArray(real, i, j);
-            swapArray(imag, i, j);
+        int j = reverseBits(i, 11); // Calculate the reversed index
+        if (j > i) {
+            swapArray(real, i, j);  // Swap real values
+            swapArray(imag, i, j);  // Swap imaginary values
         }
     }
 }
 
+// Concatenate the real and imaginary arrays into a single array
 void concatArrays(float *target, float *real, float *imag, int n) {
     for (int i = 0, j = 0; i < n; i += 2, j++) {
-        target[i] = real[j];
-        target[i + 1] = imag[j];
+        target[i] = real[j];      // Store real values
+        target[i + 1] = imag[j];  // Store imaginary values
     }
 }
 
+// Separate the concatenated array into real and imaginary arrays
 void separateArrays(float *targetReal, float *targetImag, float *source, int n) {
     for (int i = 0, j = 0; i < n; i += 2, j++) {
-            targetReal[j] = source[i];
-            targetImag[j] = source[i + 1];
-        }
+        targetReal[j] = source[i];      // Retrieve real values
+        targetImag[j] = source[i + 1];  // Retrieve imaginary values
+    }
 }
 
 void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
 {
     int n = M * 2;
 
-    float wtemp,wr,wpr,wpi,wi,theta,tempr,tempi;
+    float wtemp, wr, wpr, wpi, wi, theta, tempr, tempi;
 
-    // perform bit reversal (according to "butterfly diagram"),
-    // with the real part on the even indexes and the complex
-    // part on the odd indexes
+    // Perform bit reversal on the input arrays
     bitReversal(real, imag);
 
-    // copy input data (real and imaginary parts) into a single array
+    // Copy input data (real and imaginary parts) into a single array
     concatArrays(a->data, real, imag, n);
 
     int mmax = 2;
-    // external loop
+    // External loop
     while (n > mmax)
     {
         int istep = mmax << 1;
@@ -279,7 +281,7 @@ void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
         wpi = sinf(theta);
         wr = 1.0f;
         wi = 0.0f;
-        // internal loops
+        // Internal loops
         for (int m = 1; m < mmax; m += 2)
         {
             for (int i = m; i <= n; i += istep)
@@ -299,109 +301,102 @@ void radix2(acquisitionInternal_t *a, float *real, float *imag, int isign)
         mmax = istep;
     }
 
+    // Separate the concatenated array into real and imaginary arrays
     separateArrays(real, imag, a->data, n);
 }
 
-/*
-    performs the complex convolution of the two sequences used
-    in the chirp Z-transform
-*/
+// Performs complex convolution of two sequences used in the chirp Z-transform.
 void complexConvolution(acquisitionInternal_t *a,
                         const float *xreal, const float *ximag,
                         const float *yreal, const float *yimag,
                         float *outreal, float *outimag)
 {
-
     float temp = 0.0;
     int size = M * sizeof(float);
 
-    memcpy(a->xr, xreal, size);
-    memcpy(a->xi, ximag, size);
-    memcpy(a->yr, yreal, size);
-    memcpy(a->yi, yimag, size);
+    // Copy input arrays to internal buffers
+    memcpy(a->xrBuffer, xreal, size);
+    memcpy(a->xiBuffer, ximag, size);
+    memcpy(a->yrBuffer, yreal, size);
+    memcpy(a->yiBuffer, yimag, size);
 
-    // compute FFTs of arrays needed for convolution
-    radix2(a, a->xr, a->xi, -1);
-    radix2(a, a->yr, a->yi, -1);
+    // Compute FFTs of arrays needed for convolution
+    radix2(a, a->xrBuffer, a->xiBuffer, -1); // Forward FFT for x
+    radix2(a, a->yrBuffer, a->yiBuffer, -1); // Forward FFT for y
 
+    // Perform complex multiplication
     for (int i = 0; i < M; i++)
     {
-        temp = a->xr[i] * a->yr[i] - a->xi[i] * a->yi[i];
-        a->xi[i] = a->xi[i] * a->yr[i] + a->xr[i] * a->yi[i];
-        a->xr[i] = temp;
+        temp = a->xrBuffer[i] * a->yrBuffer[i] - a->xiBuffer[i] * a->yiBuffer[i];
+        a->xiBuffer[i] = a->xiBuffer[i] * a->yrBuffer[i] + a->xrBuffer[i] * a->yiBuffer[i];
+        a->xrBuffer[i] = temp;
     }
 
-    // compute inverse FFT needed for convolution
-    radix2(a, a->xr, a->xi, 1);
+    // Compute inverse FFT needed for convolution
+    radix2(a, a->xrBuffer, a->xiBuffer, 1); // Inverse FFT for the result
 
-    // scale the result
+    // Scale the result
     for (int i = 0; i < M; i++)
     {
-        outreal[i] = a->xr[i] / M;
-        outimag[i] = a->xi[i] / M;
+        outreal[i] = a->xrBuffer[i] / M;
+        outimag[i] = a->xiBuffer[i] / M;
     }
 }
 
-/*
-    Bluestein's algorithm for calculating FFTs for an array
-    of samples of arbitrary length, using a complex convolution
-*/
+
+// Bluestein's algorithm for calculating FFTs for an array
+// of samples of arbitrary length, using a complex convolution
 void bluestein(acquisitionInternal_t *a, float *real, float *imag)
 {
     int temp = 0;
     float angle = 0.0;
 
-    // temporary arrays and preprocessing
+    // Temporary arrays and preprocessing
     for (int i = 0, j = 1; i < a->sampleCount; i++, j++)
     {
         temp = (i * i) % (a->sampleCount * 2);
         angle = M_PI * temp / a->sampleCount;
-        a->cosTable[i] = cosf(angle);
-        a->sinTable[i] = sinf(angle);
-        a->areal[i] = real[i] * a->cosTable[i] + imag[i] * a->sinTable[i];
-        a->aimag[i] = -real[i] * a->sinTable[i] + imag[i] * a->cosTable[i];
+        a->cosTable[i] = cosf(angle); // Compute cosine values
+        a->sinTable[i] = sinf(angle); // Compute sine values
+        a->oneRTemp[i] = real[i] * a->cosTable[i] + imag[i] * a->sinTable[i];    // Apply rotation to real part
+        a->oneITemp[i] = -real[i] * a->sinTable[i] + imag[i] * a->cosTable[i];   // Apply rotation to imaginary part
     }
 
-    a->breal[0] = a->cosTable[0];
-    a->bimag[0] = a->sinTable[0];
+    a->twoRTemp[0] = a->cosTable[0];   // Set first element of b to cosine value
+    a->twoITemp[0] = a->sinTable[0];   // Set first element of b to sine value
 
+    // Precompute cosine and sine values for the complex weights
     for (int i = 1; i < a->sampleCount; i++)
     {
-        a->breal[i] = a->breal[M - i] = a->cosTable[i];
-        a->bimag[i] = a->bimag[M - i] = a->sinTable[i];
+        a->twoRTemp[i] = a->twoRTemp[M - i] = a->cosTable[i];   // Set cosine values symmetrically in b
+        a->twoITemp[i] = a->twoITemp[M - i] = a->sinTable[i];   // Set sine values symmetrically in b
     }
 
-    // convolution
-    complexConvolution(a, a->areal, a->aimag, a->breal, a->bimag, a->creal, a->cimag);
+    // Perform complex convolution
+    complexConvolution(a, a->oneRTemp, a->oneITemp, a->twoRTemp, a->twoITemp, a->threeRTemp, a->threeITemp);
 
-    // postprocessing
+    // Postprocessing
     for (int i = 0; i < a->sampleCount; i++)
     {
-        real[i] = a->creal[i] * a->cosTable[i] + a->cimag[i] * a->sinTable[i];
-        imag[i] = -a->creal[i] * a->sinTable[i] + a->cimag[i] * a->cosTable[i];
+        real[i] = a->threeRTemp[i] * a->cosTable[i] + a->threeITemp[i] * a->sinTable[i];    // Apply inverse rotation to real part
+        imag[i] = -a->threeRTemp[i] * a->sinTable[i] + a->threeITemp[i] * a->cosTable[i];   // Apply inverse rotation to imaginary part
     }
 }
 
-/*
-    Free FFT and convolution (C)
-    Copyright (c) 2021 Project Nayuki. (MIT License)
-    https://www.nayuki.io/page/free-small-fft-in-multiple-languages
-
-*/
+// Perform the Fast Fourier Transform (FFT) on the given arrays
 void fft(acquisitionInternal_t *a, float *real, float *imag)
 {
-    // if it is a power of two, use radix 2 algorithm
+    // If the sample count is a power of two
     if ((a->sampleCount & (a->sampleCount - 1)) == 0)
     {
         radix2(a, real, imag, -1);
     }
-    // otherwise, use bluestein algorithm
+    // If the sample count is arbitrary
     else
     {
         bluestein(a, real, imag);
     }
 }
-
 void inverseFft(acquisitionInternal_t *a, float *real, float *imag)
 {
     fft(a, imag, real);
