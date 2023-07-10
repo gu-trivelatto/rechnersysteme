@@ -168,6 +168,8 @@ void enterCode(acquisition_t *acq, float real, float imag)
     a->codesCount += 1;
 }
 
+
+// Calculate the X-matrix
 void computeX(acquisitionInternal_t *a)
 {
     float angle = 0.0;
@@ -194,6 +196,7 @@ void computeX(acquisitionInternal_t *a)
     }
 }
 
+// Calculate the R-matrix
 void computeR(acquisitionInternal_t *a)
 {
     float *rReal, *rImag;
@@ -214,6 +217,7 @@ void computeR(acquisitionInternal_t *a)
     }
 }
 
+// This function reverses the bits
 int reverseBits(int num, int levels) {
     int reverseNum = 0;
     for (int i = 0; i < levels; i++) {
@@ -225,6 +229,7 @@ int reverseBits(int num, int levels) {
     return reverseNum;
 }
 
+// This function swaps two elements in a float array
 void swapArray(float *array, int i, int j) {
     float temp = array[i];
     array[i] = array[j];
@@ -320,7 +325,6 @@ void complexConvolution(acquisitionInternal_t *a,
     memcpy(a->yrBuffer, yreal, size);
     memcpy(a->yiBuffer, yimag, size);
 
-    // Compute FFTs of arrays needed for convolution
     radix2(a, a->xrBuffer, a->xiBuffer, -1); // Forward FFT for x
     radix2(a, a->yrBuffer, a->yiBuffer, -1); // Forward FFT for y
 
@@ -332,7 +336,6 @@ void complexConvolution(acquisitionInternal_t *a,
         a->xrBuffer[i] = temp;
     }
 
-    // Compute inverse FFT needed for convolution
     radix2(a, a->xrBuffer, a->xiBuffer, 1); // Inverse FFT for the result
 
     // Scale the result
@@ -348,22 +351,23 @@ void complexConvolution(acquisitionInternal_t *a,
 // of samples of arbitrary length, using a complex convolution
 void bluestein(acquisitionInternal_t *a, float *real, float *imag)
 {
-    int temp = 0;
+    int var = 0;
     float angle = 0.0;
 
     // Temporary arrays and preprocessing
     for (int i = 0, j = 1; i < a->sampleCount; i++, j++)
     {
-        temp = (i * i) % (a->sampleCount * 2);
-        angle = M_PI * temp / a->sampleCount;
-        a->cosTable[i] = cosf(angle); // Compute cosine values
+        var = (i * i) % (a->sampleCount * 2);
+        angle = M_PI * var / a->sampleCount;
         a->sinTable[i] = sinf(angle); // Compute sine values
+        a->cosTable[i] = cosf(angle); // Compute cosine values
         a->oneRTemp[i] = real[i] * a->cosTable[i] + imag[i] * a->sinTable[i];    // Apply rotation to real part
         a->oneITemp[i] = -real[i] * a->sinTable[i] + imag[i] * a->cosTable[i];   // Apply rotation to imaginary part
     }
 
-    a->twoRTemp[0] = a->cosTable[0];   // Set first element of b to cosine value
     a->twoITemp[0] = a->sinTable[0];   // Set first element of b to sine value
+    a->twoRTemp[0] = a->cosTable[0];   // Set first element of b to cosine value
+    
 
     // Precompute cosine and sine values for the complex weights
     for (int i = 1; i < a->sampleCount; i++)
@@ -397,6 +401,8 @@ void fft(acquisitionInternal_t *a, float *real, float *imag)
         bluestein(a, real, imag);
     }
 }
+
+// Perform the inverse of Fast Fourier Transform (FFT) on the given arrays
 void inverseFft(acquisitionInternal_t *a, float *real, float *imag)
 {
     fft(a, imag, real);
