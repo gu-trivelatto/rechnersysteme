@@ -1,6 +1,5 @@
 
 #include "acquisition.h"
-#include <stdio.h> // apagar depois
 
 #include <malloc.h>
 #include <string.h>
