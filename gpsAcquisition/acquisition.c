@@ -12,13 +12,6 @@
 #define N_SAMPLES 1000
 #define N_FREQ 4
 
-// complex variable structure
-typedef struct
-{
-    float Re;
-    float Im;
-} complex;
-
 typedef struct
 {
     // final results
